@@ -22,9 +22,10 @@ class K8s():
 
 
 class Avi(object):
-    def __init__(self, file_path, cloud):
-        self.cloud = cloud
+    def __init__(self, file_path):
         self.file_path = file_path
+        with open(file_path + '/cloud-avi_healthcheck.json') as file_name:
+            self.cloud = json.load(file_name)['results'][0]
         with open(file_path + '/configuration-export-avi_healthcheck.json') as file_name:
             self.config = json.load(file_name)
         with open(file_path + '/serviceengine-inventory-avi_healthcheck.json') as file_name:
@@ -35,15 +36,18 @@ class Avi(object):
             self.alerts = json.load(file_name)['results']
         report = OrderedDict()
         report.update({'total_objs': self.total_objs()})
-        report.update({'cloud': self.cloud_oshiftk8s()})
         report.update({'se_groups': self.se_groups()})
         report.update({'se_vs_distribution': self.se_vs_distribution()})
         report.update({'dns_vs_state': self.dns_vs_state()})
         report.update({'cluster_state': self.cluster_state()})
         report.update({'backup_to_remote_host': self.backup_to_remote_host()})
         report.update({'alerts': self.alerts})
-        report.update({'lingering_tenants': self.find_lingering_tenants()})
-        report_name = 'avi_healthcheck_report_' + self.cloud + '_' + \
+
+        if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
+            report.update({'cloud': self.cloud_oshiftk8s()})
+            report.update({'lingering_tenants': self.find_lingering_tenants()})
+
+        report_name = 'avi_healthcheck_report_' + self.cloud['name'] + '_' + \
             datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".xlsx")
         self.write_report(report_name, report)
     ''' lookup name from obj ref '''
@@ -60,7 +64,7 @@ class Avi(object):
             total_objs[obj_type] = 0
             for obj in self.config[obj_type]:
                 try:
-                    if re.search(self.cloud, obj['cloud_ref']):
+                    if re.search(self.cloud['name'], obj['cloud_ref']):
                         total_objs[obj_type] += 1
                         if obj_type == 'VsVip':
                             if obj['east_west_placement']:
@@ -77,7 +81,8 @@ class Avi(object):
         self.k8s = K8s(file_path=self.file_path)
         oshiftk8s_configuration = OrderedDict()
         for cloud_obj in self.config['Cloud']:
-            if re.search(self.cloud, cloud_obj['name']):
+             #TODO Future clean up - self.cloud contains cloud configuration, might not need to extract from config file
+            if re.search(self.cloud['name'], cloud_obj['name']):
                 oshiftk8s_configuration = {
                     'se_deployment_method':
                         cloud_obj['oshiftk8s_configuration']['se_deployment_method'],
@@ -146,7 +151,7 @@ class Avi(object):
     def se_groups(self):
         se_groups_configuration = OrderedDict()
         for se_group_obj in self.config['ServiceEngineGroup']:
-            if re.search(self.cloud, se_group_obj['cloud_ref']):
+            if re.search(self.cloud['name'], se_group_obj['cloud_ref']):
                 se_groups_configuration[se_group_obj['name']] = {
                     'memory_per_se':
                         se_group_obj['memory_per_se'],
@@ -188,7 +193,7 @@ class Avi(object):
     def se_vs_distribution(self):
         se_vs_distribution = OrderedDict()
         for se in self.se_inventory['results']:
-            if re.search(self.cloud, se['config']['cloud_ref']):
+            if re.search(self.cloud['name'], se['config']['cloud_ref']):
                 se_vs_distribution[se['config']['name']] = {
                     'nw_vs': len(se['config']['virtualservice_refs']),
                 }
@@ -241,10 +246,8 @@ class Avi(object):
         writer.save()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("./avi_healthcheck_report.py --dir . --cloud 'OCP'")
+    parser = argparse.ArgumentParser("./avi_healthcheck_report.py --dir")
     parser.add_argument('--dir', type=str, action='store',
     default='')
-    parser.add_argument('--cloud', type=str, action='store',
-                        default='')
     args = parser.parse_args()
-    avi = Avi(file_path=args.dir, cloud=args.cloud)
+    avi = Avi(file_path=args.dir)
