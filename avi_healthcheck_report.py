@@ -22,9 +22,9 @@ class K8s():
 
 
 class Avi(object):
-    def __init__(self, file_path, cloud, k8s):
+    def __init__(self, file_path, cloud):
         self.cloud = cloud
-        self.k8s = k8s
+        self.file_path = file_path
         with open(file_path + '/configuration-export-avi_healthcheck.json') as file_name:
             self.config = json.load(file_name)
         with open(file_path + '/serviceengine-inventory-avi_healthcheck.json') as file_name:
@@ -74,6 +74,7 @@ class Avi(object):
         return total_objs
     ''' ['Cloud']['oshiftk8s_configuration'] '''
     def cloud_oshiftk8s(self):
+        self.k8s = K8s(file_path=self.file_path)
         oshiftk8s_configuration = OrderedDict()
         for cloud_obj in self.config['Cloud']:
             if re.search(self.cloud, cloud_obj['name']):
@@ -246,5 +247,4 @@ if __name__ == "__main__":
     parser.add_argument('--cloud', type=str, action='store',
                         default='')
     args = parser.parse_args()
-    avi = Avi(file_path=args.dir, cloud=args.cloud,
-              k8s=K8s(file_path=args.dir))
+    avi = Avi(file_path=args.dir, cloud=args.cloud)
