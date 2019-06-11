@@ -20,6 +20,30 @@ class K8s():
             projects_list.append(project['metadata']['name'])
         return projects_list
 
+class VMWare():
+    def __init__(self, file_path, vcenter_ip):
+        with open(file_path + '/'+vcenter_ip+'-clusterconfig-avi_healthcheck.json') as file_name:
+            self.vcenter_cluster_globals = json.load(file_name)
+    
+    def drs_search(self, cluster_name, search_filter):
+        for drsVMConfig in self.vcenter_cluster_globals[cluster_name]['drsVmConfig']:
+            if re.search(search_filter, drsVMConfig['key']):
+                return(drsVMConfig['behavior'])
+        return('Uses defaultVmBehavior')
+
+    def antiaffinity_search(self, cluster_name, search_filter):
+        for rule in self.vcenter_cluster_globals[cluster_name]['rule']:
+            for vm in rule['vm']:
+                if re.search(search_filter, vm):
+                    return(rule['name'], rule['_vimtype'])
+        return('Not Configured', 'Defaults Used')
+
+#search inside configuration by navigating nested objects(args)
+    def search(self, *argv):
+        configuration = self.vcenter_cluster_globals
+        for arg in argv:
+            configuration = configuration[arg]
+        return(configuration)
 
 class Avi(object):
     def __init__(self, file_path):
@@ -38,7 +62,8 @@ class Avi(object):
         report.update({'total_objs': self.total_objs()})
         report.update({'se_groups': self.se_groups()})
         report.update({'se_vs_distribution': self.se_vs_distribution()})
-        report.update({'dns_vs_state': self.dns_vs_state()})
+        #TODO dns_vs_state doesn't always exist
+        # report.update({'dns_vs_state': self.dns_vs_state()})
         report.update({'cluster_state': self.cluster_state()})
         report.update({'backup_to_remote_host': self.backup_to_remote_host()})
         report.update({'alerts': self.alerts})
@@ -46,6 +71,8 @@ class Avi(object):
         if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
             report.update({'cloud': self.cloud_oshiftk8s()})
             report.update({'lingering_tenants': self.find_lingering_tenants()})
+        elif self.cloud['vtype'] == 'CLOUD_VCENTER':
+            report.update({'cloud': self.cloud_vmware()})
 
         report_name = 'avi_healthcheck_report_' + self.cloud['name'] + '_' + \
             datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".xlsx")
@@ -76,6 +103,66 @@ class Avi(object):
             if total_objs[obj_type] == 0:
                 total_objs.pop(obj_type)
         return total_objs
+
+    def cloud_vmware(self):
+        vmware_configuration = OrderedDict()
+        with open(self.file_path + '/cluster-avi_healthcheck.json') as file_name:
+            cluster = json.load(file_name)
+        with open(self.file_path + '/vimgrvcenterruntime-avi_healthcheck.json') as file_name:
+            vcenter_runtime = json.load(file_name)['results'][0]
+        with open(self.file_path + '/vimgrclusterruntime-avi_healthcheck.json') as file_name:
+            vcenter_cluster_runtime = json.load(file_name)['results']
+        with open(self.file_path + '/vimgrsevmruntime-avi_healthcheck.json') as file_name:
+            vcenter_sevm_runtime = json.load(file_name)['results']
+        #TODO validate if vm_mor is a vmid for controllers
+        #TODO validate the vm id exists in vimgrvmruntime
+        #TODO if exists - do cluster search similar to sevm
+        # for cluster_node in cluster['nodes']:
+        #     print cluster_node
+        #TODO Re-Use self.cloud??
+        for cloud_obj in self.config['Cloud']:
+            if re.search(self.cloud['name'], cloud_obj['name']):
+                vmware_configuration = {
+                    'vcenter_url':
+                        cloud_obj['vcenter_configuration']['vcenter_url'],
+                    'privilege':
+                        cloud_obj['vcenter_configuration']['privilege'],
+                     #TODO some type of regex for pg-xxx   
+                     #TODO Cloud get doesn't include_name
+                     #re.search(r'(?<=#).*',cloud_obj['vcenter_configuration']['management_network']).group()
+                    'management_nw': 
+                        cloud_obj['vcenter_configuration']['management_network'],
+                    'dhcp_enabled':
+                        cloud_obj['dhcp_enabled'],
+                    'prefer_static_routes':
+                        cloud_obj['prefer_static_routes'],
+                    'vcenter_version':
+                        vcenter_runtime['vcenter_fullname'],
+                    'discovered_datacenter':
+                        vcenter_runtime['discovered_datacenter']
+                }
+        vcenter_cluster_config = VMWare(self.file_path, self.cloud['vcenter_configuration']['vcenter_url'])
+        
+        for sevm in vcenter_sevm_runtime:
+            vmware_configuration[sevm['name']+'_object_id'] = \
+                sevm['managed_object_id']
+            vmware_configuration[sevm['name']+'_connection_state'] = \
+                sevm['connection_state']
+            vmware_configuration[sevm['name']+'_host_placement'] = \
+                sevm['host_ref']
+            for cluster_run in vcenter_cluster_runtime:
+                for host in cluster_run['host_refs']:
+                    if host == sevm['host_ref']:
+                        vmware_configuration[cluster_run['name']+'_defaultVmBehavior'] = vcenter_cluster_config.search(cluster_run['name'], "drsConfig", "defaultVmBehavior")
+                        vmware_configuration[sevm['name']+'_cluster'] = \
+                            cluster_run['name']
+                        vmware_configuration[sevm['name']+'_drs_setting'] = \
+                            vcenter_cluster_config.drs_search(cluster_run['name'], sevm['managed_object_id'])
+                        rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], sevm['managed_object_id'])
+                        vmware_configuration[sevm['name']+'_antiaffinity_name'] = rule_name
+                        vmware_configuration[sevm['name']+'_antiaffinity_setting'] = rule_type
+        return vmware_configuration
+
     ''' ['Cloud']['oshiftk8s_configuration'] '''
     def cloud_oshiftk8s(self):
         self.k8s = K8s(file_path=self.file_path)
@@ -186,6 +273,17 @@ class Avi(object):
                 try:
                     se_groups_configuration[se_group_obj['name']]['realtime_se_metrics'] = \
                             se_group_obj['realtime_se_metrics']
+                except:
+                    pass
+                try:
+                    se_groups_configuration[se_group_obj['name']]['vcenter_datastores_include'] = \
+                            se_group_obj['vcenter_datastores_include']
+                    se_groups_configuration[se_group_obj['name']]['vcenter_folder'] = \
+                            se_group_obj['vcenter_folder']
+                    se_groups_configuration[se_group_obj['name']]['vcenter_datastore_mode'] = \
+                            se_group_obj['vcenter_datastore_mode']
+                    se_groups_configuration[se_group_obj['name']]['vcenter_folder'] = \
+                            se_group_obj['vcenter_folder']
                 except:
                     pass
         return se_groups_configuration
