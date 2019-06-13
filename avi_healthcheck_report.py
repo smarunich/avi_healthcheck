@@ -114,11 +114,6 @@ class Avi(object):
             vcenter_cluster_runtime = json.load(file_name)['results']
         with open(self.file_path + '/vimgrsevmruntime-avi_healthcheck.json') as file_name:
             vcenter_sevm_runtime = json.load(file_name)['results']
-        #TODO validate if vm_mor is a vmid for controllers
-        #TODO validate the vm id exists in vimgrvmruntime
-        #TODO if exists - do cluster search similar to sevm
-        # for cluster_node in cluster['nodes']:
-        #     print cluster_node
         #TODO Re-Use self.cloud??
         for cloud_obj in self.config['Cloud']:
             if re.search(self.cloud['name'], cloud_obj['name']):
@@ -161,6 +156,22 @@ class Avi(object):
                         rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], sevm['managed_object_id'])
                         vmware_configuration[sevm['name']+'_antiaffinity_name'] = rule_name
                         vmware_configuration[sevm['name']+'_antiaffinity_setting'] = rule_type
+
+        for cluster_node in cluster['nodes']:
+            if re.search('^vm-\d+',cluster_node['vm_mor']):
+                for vm_runtime in self.config['VIMgrVMRuntime']:
+                    if vm_runtime['managed_object_id'] == cluster_node['vm_mor']:
+                        vmware_configuration[vm_runtime['name']  +'_num_cpu'] = vm_runtime['num_cpu']
+                        vmware_configuration[vm_runtime['name']  +'_memory'] = vm_runtime['memory']
+                        vmware_configuration[vm_runtime['name']  +'_host_placement'] = vm_runtime['host']
+                        for cluster_run in self.config['VIMgrClusterRuntime']:
+                            for host in cluster_run['host_refs']:
+                                if re.search(vm_runtime['host'], host):
+                                    vmware_configuration[vm_runtime['name']+'_drs_setting'] = \
+                                    vcenter_cluster_config.drs_search(cluster_run['name'], vm_runtime['managed_object_id'])
+                                    rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], vm_runtime['managed_object_id'])
+                                    vmware_configuration[vm_runtime['name']+'_antiaffinity_name'] = rule_name
+                                    vmware_configuration[vm_runtime['name']+'_antiaffinity_setting'] = rule_type                                   
         return vmware_configuration
 
     ''' ['Cloud']['oshiftk8s_configuration'] '''
