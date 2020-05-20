@@ -66,6 +66,16 @@ class Avi(object):
         # report.update({'dns_vs_state': self.dns_vs_state()})
         report.update({'cluster_state': self.cluster_state()})
         report.update({'backup_to_remote_host': self.backup_to_remote_host()})
+        #JDA
+        report.update({'backup_enabled': self.backup_enabled()})
+        report.update({'tenant_count': self.tenant_count()})
+        report.update({'default_ntp': self.default_ntp()})
+        report.update({'app_profile': self.app_profile()})
+        report.update({'net_profile': self.net_profile()})
+        report.update({'policies_datascript_info': self.policies_datascript_info()})
+        report.update({'vs_analytics': self.vs_analytics()})
+        report.update({'analytics_profile': self.analytics_profile()})
+        #
         report.update({'alerts': self.alerts})
 
         if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
@@ -261,6 +271,9 @@ class Avi(object):
                         se_group_obj['max_se'],
                     'min_scaleout_per_vs':
                         se_group_obj['min_scaleout_per_vs'],
+                    #JDA
+                    'max_scaleout_per_vs':
+                        se_group_obj['max_scaleout_per_vs'],    
                     'algo':
                         se_group_obj['algo'],
                     'placement_mode':
@@ -319,6 +332,151 @@ class Avi(object):
         except:
             backup_to_remote_host = False
         return backup_to_remote_host
+    def backup_enabled(self):
+        try:
+            backup_enabled = False
+            for row in self.config['Scheduler']:
+                if row['scheduler_action'] == 'SCHEDULER_ACTION_BACKUP':
+                    if row['enabled'] == True:
+                        backup_enabled = True
+                        break
+        except:
+            backup_enabled = False
+        return backup_enabled
+    def tenant_count(self):
+        try:
+            tenant_count = len(self.config['Tenant'])
+        except:
+            tenant_count = 0
+        return tenant_count
+    def default_ntp(self):
+        try:
+            if self.config['SystemConfiguration'][0]['ntp_configuration'].get('ntp_servers'):
+                default_ntp = False
+            else:
+                default_ntp = True
+        except:
+            default_ntp = False
+        return default_ntp
+    def app_profile(self):
+        app_profile = OrderedDict()
+        app_profile['total'] = len(self.config['ApplicationProfile'])
+        #HTTP profiles info
+        no_mux_http = 0
+        http_to_https = 0
+        total_http = 0
+        try:
+            for row in self.config['ApplicationProfile']:
+                if row['type'] == 'APPLICATION_PROFILE_TYPE_HTTP':
+                    total_http += 1
+                    if not row['http_profile']['connection_multiplexing_enabled']:
+                        no_mux_http += 1
+                    if row['http_profile']['http_to_https']:
+                        http_to_https += 1
+            app_profile['total_http'] = total_http
+            app_profile['no_mux_http'] = no_mux_http
+            app_profile['http_to_https'] = http_to_https
+        except:
+            app_profile['no_mux_http'] = 0
+            app_profile['no_mux_http'] = 0
+            app_profile['http_to_https'] = 0
+        #Preserve client IP
+        try:
+            preserve_client_ip = 0
+            for row in self.config['ApplicationProfile']:
+                if row['preserve_client_ip']:
+                    preserve_client_ip += 1
+            app_profile['preserve_client_ip'] = preserve_client_ip
+        except:
+            app_profile['preserve_client_ip'] = 0
+        
+        return app_profile
+    def net_profile(self):
+        net_profile = OrderedDict()
+        net_profile['total'] = len(self.config['NetworkProfile'])
+        #TCP-Proxy with manual config params
+        try:
+            tcpproxy_manual = 0
+            tcpproxy_nagles = 0
+            for row in self.config['NetworkProfile']:
+                if row['profile']['type'] == 'PROTOCOL_TYPE_TCP_PROXY':
+                    if not row['profile']['tcp_proxy_profile']['automatic'] :
+                        tcpproxy_manual += 1
+                        if row['profile']['tcp_proxy_profile']['nagles_algorithm']:
+                            tcpproxy_nagles += 1
+            net_profile['tcpproxy_manual'] = tcpproxy_manual
+            net_profile['tcpproxy_nagles'] = tcpproxy_nagles
+        except:
+            net_profile['tcpproxy_manual'] = 0
+            net_profile['tcpproxy_nagles'] = 0
+        #TCP-FastPath with DSR
+        try:
+            tcpfast_dsr = 0
+            for row in self.config['NetworkProfile']:
+                if row['profile']['type'] == 'PROTOCOL_TYPE_TCP_FAST_PATH':
+                    if row['profile']['tcp_fast_path_profile'].get('dsr_profile'):
+                        tcpfast_dsr += 1
+            net_profile['tcpfast_dsr'] = tcpfast_dsr
+        except:
+            net_profile['tcpfast_dsr'] = 0
+        
+        
+        return net_profile
+    def policies_datascript_info(self):
+        policies_datascript_info = OrderedDict()
+        ds_refs = 0
+        l4_refs = 0
+        try:
+            for row in self.config['VirtualService']:
+                if re.search(self.cloud['name'], row['cloud_ref']):
+                    if row.get('vs_datascripts'):
+                        ds_refs += 1
+                    if row.get('l4_policies'):
+                        l4_refs += 1
+            policies_datascript_info['ds_refs'] = ds_refs
+            policies_datascript_info['l4_refs'] = l4_refs
+        except:
+            policies_datascript_info['ds_refs'] = 0
+            policies_datascript_info['l4_refs'] = 0
+        return policies_datascript_info
+    def vs_analytics(self):
+        vs_analytics = OrderedDict()
+        non_significant = 0
+        all_headers = 0
+        realtime_metrics = 0
+        client_insights = 0
+        try:
+            for row in self.config['VirtualService']:
+                if re.search(self.cloud['name'], row['cloud_ref']):
+                    if row['analytics_policy']['full_client_logs']['enabled'] and row['analytics_policy']['full_client_logs']['duration'] == 0:
+                        non_significant += 1
+                    if row['analytics_policy']['all_headers']:
+                        all_headers += 1
+                    if row['analytics_policy']['metrics_realtime_update']['enabled'] and row['analytics_policy']['metrics_realtime_update']['duration'] == 0:
+                        realtime_metrics += 1
+                    if row['analytics_policy']['client_insights'] != 'NO_INSIGHTS':
+                        client_insights += 1
+            vs_analytics['non_significant'] = non_significant
+            vs_analytics['all_headers'] = all_headers
+            vs_analytics['realtime_metrics'] = realtime_metrics
+            vs_analytics['client_insights'] = client_insights
+        except:
+            vs_analytics['non_significant'] = 0
+            vs_analytics['all_headers'] = 0
+            vs_analytics['realtime_metrics'] = 0
+            vs_analytics['client_insights'] = 0        
+        return vs_analytics
+    def analytics_profile(self):
+        analytics_profile = OrderedDict()
+        stream_logs = 0
+        try:
+            for row in self.config['AnalyticsProfile']:
+                if row.get('client_log_streaming_config'): 
+                    stream_logs += 1
+            analytics_profile['stream_logs'] = stream_logs       
+        except:
+            analytics_profile['stream_logs'] = 0     
+        return analytics_profile
     ''' dns vs state '''
     def dns_vs_state(self):
         url = self.config['SystemConfiguration'][0]['dns_virtualservice_refs'][0]
