@@ -6,6 +6,7 @@ import datetime
 import pandas as pd
 from collections import OrderedDict
 from pandas.io.json import json_normalize
+from datetime import date
 
 class K8s():
     def __init__(self, file_path):
@@ -75,6 +76,14 @@ class Avi(object):
         report.update({'policies_datascript_info': self.policies_datascript_info()})
         report.update({'vs_analytics': self.vs_analytics()})
         report.update({'analytics_profile': self.analytics_profile()})
+        #Sachin
+        report.update({'total_pools': self.total_pools()})
+        report.update({'total_ssl_prof': self.total_ssl_prof()})
+        report.update({'total_bgp_prof': self.total_bgp_prof()})
+        report.update({'total_se_debug_flag': self.total_se_debug_flag()})
+        report.update({'total_cert': self.total_cert()})
+        report.update({'license': self.license()})
+        report.update({'hm_interval': self.hm_interval()})
         #
         report.update({'alerts': self.alerts})
 
@@ -477,6 +486,159 @@ class Avi(object):
         except:
             analytics_profile['stream_logs'] = 0     
         return analytics_profile
+    #Sachin
+    def total_pools(self):
+        total_pools = OrderedDict()
+        total_pools['ref_default_hm'] = 0
+        total_pools['ref_custom_hm'] = 0
+        total_pools['server_reselect_enabled'] = 0
+        # total_pools['ser_reselect_f'] = 0
+        total_pools['ref_application_persistence_profile'] = 0
+        total_pools['passive_hm_enabled'] = 0
+        default_hm = ['System-HTTP','System-HTTPS','System-Ping','System-TCP','System-UDP','System-DNS','System-Xternal-Perl','System-Xternal-Shell', \
+                      'System-Xternal-Python','System-PingAccessAgent','System-GSLB-Ping','System-GSLB-TCP','System-GSLB-HTTP','System-GSLB-HTTPS','System-GSLB-UDP']
+
+        hm_type = ['HEALTH_MONITOR_HTTP','HEALTH_MONITOR_HTTPS','HEALTH_MONITOR_PING','HEALTH_MONITOR_PING','HEALTH_MONITOR_TCP','HEALTH_MONITOR_UDP', \
+                       'HEALTH_MONITOR_DNS','HEALTH_MONITOR_EXTERNAL']
+        for pool_obj in self.config['Pool']:
+            # cust_flag = 1
+            if re.search(self.cloud['name'], pool_obj['cloud_ref']):
+                if pool_obj.get('health_monitor_refs'):
+                    for pool_assign_hm in pool_obj['health_monitor_refs']:
+                        if (pool_assign_hm.split("="))[-1] in default_hm:
+                            total_pools['ref_default_hm'] += 1
+                        #     cust_flag = 0
+                        # if cust_flag:
+                        else:
+                            total_pools['ref_custom_hm'] += 1
+                        for hm_detail1 in self.config['HealthMonitor']:
+                            if hm_detail1['name'] == (pool_assign_hm.split("="))[-1]:
+                                if total_pools.has_key(hm_detail1['type']):
+                                    total_pools[hm_detail1['type']] +=1
+                                else:
+                                    total_pools[hm_detail1['type']] = 1
+                if pool_obj['inline_health_monitor']:
+                    total_pools['passive_hm_enabled'] += 1
+
+                if pool_obj['server_reselect']['retry_nonidempotent']:
+                    total_pools['server_reselect_enabled'] += 1
+                # else:
+                #     total_pools['ser_reselect_f'] += 1
+
+                try:
+                    persist_profile = pool_obj['ref_application_persistence_profile']
+                    if  persist_profile != "":
+                        total_pools['ref_application_persistence_profile'] += 1
+                except:
+                    pass
+        return total_pools
+    def total_ssl_prof(self):
+        total_ssl_prof = OrderedDict()
+        total_ssl_prof['comp_rating_SCORE_EXCELLENT'] = 0
+        total_ssl_prof['sec_score_100'] = 0
+        total_ssl_prof['perf_rating_SCORE_EXCELLENT'] = 0
+        total_ssl_prof['comp_rating_SCORE_non-EXCELLENT'] = 0
+        total_ssl_prof['sec_score_below_100'] = 0
+        total_ssl_prof['perf_rating_SCORE_non-EXCELLENT'] = 0
+        try:
+            for ssl_prof_att in self.config['SSLProfile']:
+
+                if (ssl_prof_att['ssl_rating']['compatibility_rating'] == "SSL_SCORE_EXCELLENT"):
+                    total_ssl_prof['comp_rating_SCORE_EXCELLENT'] += 1
+                else:
+                    total_ssl_prof['comp_rating_SCORE_non-EXCELLENT'] += 1
+
+                if (round(float(ssl_prof_att['ssl_rating']['security_score'])) == 100):
+                    total_ssl_prof['sec_score_100'] += 1
+                else:
+                    total_ssl_prof['sec_score_below_100'] += 1
+
+                if (ssl_prof_att['ssl_rating']['performance_rating'] == "SSL_SCORE_EXCELLENT"):
+                    total_ssl_prof['perf_rating_SCORE_EXCELLENT'] += 1
+                else:
+                    total_ssl_prof['perf_rating_SCORE_non-EXCELLENT'] += 1
+        except:
+            pass
+        return total_ssl_prof
+    def total_bgp_prof(self):
+        total_bgp_prof = OrderedDict()
+        total_bgp_prof['default_hold_time'] = 0
+        total_bgp_prof['hold_time_less_then_default'] = 0
+        total_bgp_prof['default_keepalive_interval'] = 0
+        total_bgp_prof['keepalive_interval_less_then_default'] = 0
+        for vrf_detail in self.config['VrfContext']:
+            if re.search(self.cloud['name'], vrf_detail['cloud_ref']):
+                try:
+                    for peer_bgp_cnf in vrf_detail['bgp_profile']['peers']:
+                        if (peer_bgp_cnf['keepalive_interval'] == 60):
+                            total_bgp_prof['default_keepalive_interval'] += 1
+                        elif (peer_bgp_cnf['keepalive_interval'] < 60):
+                            total_bgp_prof['keepalive_interval_less_then_default'] += 1
+                        
+                        if (peer_bgp_cnf['hold_time'] == 180):
+                            total_bgp_prof['default_hold_time'] += 1
+                        elif (peer_bgp_cnf['hold_time'] < 180):
+                            total_bgp_prof['hold_time_less_then_default'] += 1
+                except:
+                    pass
+        return total_bgp_prof
+    def total_se_debug_flag(self):
+        total_se_debug_flag = OrderedDict()
+        total_se_debug_flag['enabled'] = 0
+        for se_debug_detail in self.config['DebugServiceEngine']:
+            try:
+                if se_debug_detail.has_key('flags'):
+                    total_se_debug_flag['enabled'] += 1
+            except:
+                pass
+        return total_se_debug_flag
+    def total_cert(self):
+        total_cert = OrderedDict()
+        total_cert['near_to_expire_in_60days'] = 0
+        for cert_detail in self.config['SSLKeyAndCertificate']:
+            try:
+                if (cert_detail['certificate']['days_until_expire']) < 60:
+                    total_cert['near_to_expire_in_60days'] += 1
+            except:
+                pass
+        return total_cert
+    def license(self):
+        license = OrderedDict()
+        license['expired'] = 0
+        license['valid'] = 0
+        try:
+            for lice_list in self.config['ControllerLicense']:
+                for lice_detail in lice_list['licenses']:
+                    lice_exp_date = (str(((lice_detail['valid_until']).split('T'))[0])).split('-')
+                    today = date.today()
+                    lice_exp_date2 = date(int(lice_exp_date[0]),int(lice_exp_date[1]),int(lice_exp_date[2]))
+                    diff = lice_exp_date2 - today
+                    if (diff.days) < 0:
+                        license['expired'] += 1
+                        license['_name_'+lice_detail['license_name']+'_elapsed_days'] = abs(diff.days)
+                    elif (diff.days) > 0:
+                        license['valid'] += 1
+                        license['_name_'+lice_detail['license_name']+'_days_valid'] = diff.days
+        except:
+            pass
+        return license
+    def hm_interval(self):
+        hm_interval = OrderedDict()
+        hm_interval['less_then_default_send_interval'] = 0
+        # hm_interval['equ_to_def_send_int'] = 0
+        def_hm = ['System-HTTP','System-HTTPS','System-Ping','System-TCP','System-UDP','System-DNS','System-Xternal-Perl','System-Xternal-Shell', \
+                      'System-Xternal-Python','System-PingAccessAgent','System-GSLB-Ping','System-GSLB-TCP','System-GSLB-HTTP','System-GSLB-HTTPS','System-GSLB-UDP']
+        def_hm_type = {'HEALTH_MONITOR_HTTP':'10','HEALTH_MONITOR_HTTPS':'10','HEALTH_MONITOR_PING':'10','HEALTH_MONITOR_PING':'10','HEALTH_MONITOR_TCP':'10', \
+                       'HEALTH_MONITOR_UDP':'4','HEALTH_MONITOR_DNS':'6','HEALTH_MONITOR_EXTERNAL':'30'}
+        try:
+            for hm_detail in self.config['HealthMonitor']:
+                if ((not (hm_detail['name'] in def_hm)) and (hm_detail['send_interval'] < (def_hm_type[hm_detail['type']]))):
+                    hm_interval['less_then_default_send_interval'] +=1
+                # elif ((not (hm_detail['name'] in def_hm)) and (hm_detail['send_interval'] == (def_hm_type[hm_detail['type']]))):
+                #     hm_interval['equ_to_def_send_int'] +=1
+        except:
+            pass
+        return hm_interval
     ''' dns vs state '''
     def dns_vs_state(self):
         url = self.config['SystemConfiguration'][0]['dns_virtualservice_refs'][0]
