@@ -61,13 +61,14 @@ class Avi(object):
             self.alerts = json.load(file_name)['results']
         report = OrderedDict()
         report.update({'total_objs': self.total_objs()})
+        #print type(self.total_objs())
+        #print self.total_objs()
         report.update({'se_groups': self.se_groups()})
         report.update({'se_vs_distribution': self.se_vs_distribution()})
         #TODO dns_vs_state doesn't always exist
         # report.update({'dns_vs_state': self.dns_vs_state()})
         report.update({'cluster_state': self.cluster_state()})
         report.update({'backup_to_remote_host': self.backup_to_remote_host()})
-        #JDA
         report.update({'backup_enabled': self.backup_enabled()})
         report.update({'tenant_count': self.tenant_count()})
         report.update({'default_ntp': self.default_ntp()})
@@ -76,17 +77,14 @@ class Avi(object):
         report.update({'policies_datascript_info': self.policies_datascript_info()})
         report.update({'vs_analytics': self.vs_analytics()})
         report.update({'analytics_profile': self.analytics_profile()})
-        #Sachin
-        report.update({'total_pools': self.total_pools()})
-        report.update({'total_ssl_prof': self.total_ssl_prof()})
-        report.update({'total_bgp_prof': self.total_bgp_prof()})
+        report.update({'pools_info': self.pools_info()})
+        report.update({'ssl_profile': self.ssl_profile()})
+        report.update({'bgp_profile': self.bgp_profile()})
         report.update({'total_se_debug_flag': self.total_se_debug_flag()})
         report.update({'total_cert': self.total_cert()})
         report.update({'license': self.license()})
         report.update({'hm_interval': self.hm_interval()})
-        #
         report.update({'alerts': self.alerts})
-
         if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
             report.update({'cloud': self.cloud_oshiftk8s()})
             report.update({'lingering_tenants': self.find_lingering_tenants()})
@@ -267,6 +265,19 @@ class Avi(object):
     ''' se_groups configuration '''
     def se_groups(self):
         se_groups_configuration = OrderedDict()
+        seg_info = {}
+        for seg in self.config['ServiceEngine']:
+            try:
+                ref = seg['se_group_ref']
+                seg_name = ref.split('/')[3].split('=')[2].split('&')[0]
+                cloud = ref.split('/')[3].split('=')[3]
+                if cloud == self.cloud['name']:
+                    if seg_name not in seg_info:
+                        seg_info[seg_name] = 1
+                    else:
+                        seg_info[seg_name] = seg_info[seg_name] + 1
+            except:
+                pass
         for se_group_obj in self.config['ServiceEngineGroup']:
             if re.search(self.cloud['name'], se_group_obj['cloud_ref']):
                 se_groups_configuration[se_group_obj['name']] = {
@@ -280,7 +291,10 @@ class Avi(object):
                         se_group_obj['max_se'],
                     'min_scaleout_per_vs':
                         se_group_obj['min_scaleout_per_vs'],
-                    #JDA
+                    'tenant' :
+                        se_group_obj['tenant_ref'].split('=')[1],
+                    'se_count' :
+                        seg_info.get(se_group_obj['name']),
                     'max_scaleout_per_vs':
                         se_group_obj['max_scaleout_per_vs'],    
                     'algo':
@@ -428,8 +442,6 @@ class Avi(object):
             net_profile['tcpfast_dsr'] = tcpfast_dsr
         except:
             net_profile['tcpfast_dsr'] = 0
-        
-        
         return net_profile
     def policies_datascript_info(self):
         policies_datascript_info = OrderedDict()
@@ -486,15 +498,14 @@ class Avi(object):
         except:
             analytics_profile['stream_logs'] = 0     
         return analytics_profile
-    #Sachin
-    def total_pools(self):
-        total_pools = OrderedDict()
-        total_pools['ref_default_hm'] = 0
-        total_pools['ref_custom_hm'] = 0
-        total_pools['server_reselect_enabled'] = 0
-        # total_pools['ser_reselect_f'] = 0
-        total_pools['ref_application_persistence_profile'] = 0
-        total_pools['passive_hm_enabled'] = 0
+    def pools_info(self):
+        pools_info = OrderedDict()
+        pools_info['ref_default_hm'] = 0
+        pools_info['ref_custom_hm'] = 0
+        pools_info['server_reselect_enabled'] = 0
+        # pools_info['ser_reselect_f'] = 0
+        pools_info['ref_application_persistence_profile'] = 0
+        pools_info['passive_hm_enabled'] = 0
         default_hm = ['System-HTTP','System-HTTPS','System-Ping','System-TCP','System-UDP','System-DNS','System-Xternal-Perl','System-Xternal-Shell', \
                       'System-Xternal-Python','System-PingAccessAgent','System-GSLB-Ping','System-GSLB-TCP','System-GSLB-HTTP','System-GSLB-HTTPS','System-GSLB-UDP']
 
@@ -506,99 +517,97 @@ class Avi(object):
                 if pool_obj.get('health_monitor_refs'):
                     for pool_assign_hm in pool_obj['health_monitor_refs']:
                         if (pool_assign_hm.split("="))[-1] in default_hm:
-                            total_pools['ref_default_hm'] += 1
+                            pools_info['ref_default_hm'] += 1
                         #     cust_flag = 0
                         # if cust_flag:
                         else:
-                            total_pools['ref_custom_hm'] += 1
+                            pools_info['ref_custom_hm'] += 1
                         for hm_detail1 in self.config['HealthMonitor']:
                             if hm_detail1['name'] == (pool_assign_hm.split("="))[-1]:
-                                if total_pools.has_key(hm_detail1['type']):
-                                    total_pools[hm_detail1['type']] +=1
+                                if pools_info.has_key(hm_detail1['type']):
+                                    pools_info[hm_detail1['type']] +=1
                                 else:
-                                    total_pools[hm_detail1['type']] = 1
+                                    pools_info[hm_detail1['type']] = 1
                 if pool_obj['inline_health_monitor']:
-                    total_pools['passive_hm_enabled'] += 1
+                    pools_info['passive_hm_enabled'] += 1
 
                 if pool_obj['server_reselect']['retry_nonidempotent']:
-                    total_pools['server_reselect_enabled'] += 1
+                    pools_info['server_reselect_enabled'] += 1
                 # else:
-                #     total_pools['ser_reselect_f'] += 1
+                #     pools_info['ser_reselect_f'] += 1
 
                 try:
                     persist_profile = pool_obj['ref_application_persistence_profile']
                     if  persist_profile != "":
-                        total_pools['ref_application_persistence_profile'] += 1
+                        pools_info['ref_application_persistence_profile'] += 1
                 except:
                     pass
-        return total_pools
-    def total_ssl_prof(self):
-        total_ssl_prof = OrderedDict()
-        total_ssl_prof['comp_rating_SCORE_EXCELLENT'] = 0
-        total_ssl_prof['sec_score_100'] = 0
-        total_ssl_prof['perf_rating_SCORE_EXCELLENT'] = 0
-        total_ssl_prof['comp_rating_SCORE_non-EXCELLENT'] = 0
-        total_ssl_prof['sec_score_below_100'] = 0
-        total_ssl_prof['perf_rating_SCORE_non-EXCELLENT'] = 0
+        return pools_info
+    def ssl_profile(self):
+        ssl_profile = OrderedDict()
+        ssl_profile['comp_rating_SCORE_EXCELLENT'] = 0
+        ssl_profile['sec_score_100'] = 0
+        ssl_profile['perf_rating_SCORE_EXCELLENT'] = 0
+        ssl_profile['comp_rating_SCORE_non-EXCELLENT'] = 0
+        ssl_profile['sec_score_below_100'] = 0
+        ssl_profile['perf_rating_SCORE_non-EXCELLENT'] = 0
         try:
             for ssl_prof_att in self.config['SSLProfile']:
 
                 if (ssl_prof_att['ssl_rating']['compatibility_rating'] == "SSL_SCORE_EXCELLENT"):
-                    total_ssl_prof['comp_rating_SCORE_EXCELLENT'] += 1
+                    ssl_profile['comp_rating_SCORE_EXCELLENT'] += 1
                 else:
-                    total_ssl_prof['comp_rating_SCORE_non-EXCELLENT'] += 1
+                    ssl_profile['comp_rating_SCORE_non-EXCELLENT'] += 1
 
                 if (round(float(ssl_prof_att['ssl_rating']['security_score'])) == 100):
-                    total_ssl_prof['sec_score_100'] += 1
+                    ssl_profile['sec_score_100'] += 1
                 else:
-                    total_ssl_prof['sec_score_below_100'] += 1
+                    ssl_profile['sec_score_below_100'] += 1
 
                 if (ssl_prof_att['ssl_rating']['performance_rating'] == "SSL_SCORE_EXCELLENT"):
-                    total_ssl_prof['perf_rating_SCORE_EXCELLENT'] += 1
+                    ssl_profile['perf_rating_SCORE_EXCELLENT'] += 1
                 else:
-                    total_ssl_prof['perf_rating_SCORE_non-EXCELLENT'] += 1
+                    ssl_profile['perf_rating_SCORE_non-EXCELLENT'] += 1
         except:
             pass
-        return total_ssl_prof
-    def total_bgp_prof(self):
-        total_bgp_prof = OrderedDict()
-        total_bgp_prof['default_hold_time'] = 0
-        total_bgp_prof['hold_time_less_then_default'] = 0
-        total_bgp_prof['default_keepalive_interval'] = 0
-        total_bgp_prof['keepalive_interval_less_then_default'] = 0
+        return ssl_profile
+    def bgp_profile(self):
+        bgp_profile = OrderedDict()
+        bgp_profile['default_hold_time'] = 0
+        bgp_profile['hold_time_less_then_default'] = 0
+        bgp_profile['default_keepalive_interval'] = 0
+        bgp_profile['keepalive_interval_less_then_default'] = 0
         for vrf_detail in self.config['VrfContext']:
             if re.search(self.cloud['name'], vrf_detail['cloud_ref']):
                 try:
                     for peer_bgp_cnf in vrf_detail['bgp_profile']['peers']:
                         if (peer_bgp_cnf['keepalive_interval'] == 60):
-                            total_bgp_prof['default_keepalive_interval'] += 1
+                            bgp_profile['default_keepalive_interval'] += 1
                         elif (peer_bgp_cnf['keepalive_interval'] < 60):
-                            total_bgp_prof['keepalive_interval_less_then_default'] += 1
+                            bgp_profile['keepalive_interval_less_then_default'] += 1
                         
                         if (peer_bgp_cnf['hold_time'] == 180):
-                            total_bgp_prof['default_hold_time'] += 1
+                            bgp_profile['default_hold_time'] += 1
                         elif (peer_bgp_cnf['hold_time'] < 180):
-                            total_bgp_prof['hold_time_less_then_default'] += 1
+                            bgp_profile['hold_time_less_then_default'] += 1
                 except:
                     pass
-        return total_bgp_prof
+        return bgp_profile
     def total_se_debug_flag(self):
-        total_se_debug_flag = OrderedDict()
-        total_se_debug_flag['enabled'] = 0
+        total_se_debug_flag = 0
         for se_debug_detail in self.config['DebugServiceEngine']:
             try:
                 if se_debug_detail.has_key('flags'):
-                    total_se_debug_flag['enabled'] += 1
+                    total_se_debug_flag += 1
             except:
                 pass
         return total_se_debug_flag
     def total_cert(self):
-        total_cert = OrderedDict()
-        total_cert['near_to_expire_in_60days'] = 0
+        total_cert = 0
         for cert_detail in self.config['SSLKeyAndCertificate']:
             try:
                 if (cert_detail['certificate']['days_until_expire']) < 60:
-                    total_cert['near_to_expire_in_60days'] += 1
+                    total_cert += 1
             except:
                 pass
         return total_cert
@@ -666,12 +675,56 @@ class Avi(object):
 
     def write_report(self, name, report):
         writer = pd.ExcelWriter(name, engine='xlsxwriter')
-        pd_report = json_normalize(report)
+        #JDA
+        #Total Objects
+        #df = pd.Series(report['total_objs'],name='Item').to_frame()
+        #df.to_excel(writer, sheet_name='Total Objects')
+        #worksheet = writer.sheets['Total Objects']
+        #worksheet.set_row(0, None, None, {'hidden': True})
+        #worksheet.set_column('A:B', 40)
+        #Service Engine Group breakdown
+        offset = 0
+        for key in report['se_groups']:
+            dfX = pd.Series(report['se_groups'][key],name=key).to_frame()
+            dfX.transpose().to_excel(writer, startrow = offset, sheet_name='SEG Info')    
+            worksheetX = writer.sheets['SEG Info']
+            if offset != 0:
+                worksheetX.set_row(offset, None, None, {'hidden': True})
+            offset = offset + 2
+            worksheetX.set_column('A:R', 15)      
+        #Single Values
+        single_dict ={}
+        for key in report.keys():
+            if isinstance(report[key],(int,bool)):
+                single_dict[key] = report[key]
+        pd_report = json_normalize(single_dict)
         df = pd.DataFrame(pd_report).transpose()
-        df.to_excel(writer, sheet_name='Main')
-        worksheet = writer.sheets['Main']
+        df.to_excel(writer, sheet_name='General Settings')
+        worksheet = writer.sheets['General Settings']
         worksheet.set_row(0, None, None, {'hidden': True})
         worksheet.set_column('A:B', 40)
+        #Group info on tabs
+        tabs = {
+            'Profiles': ['app_profile', 'net_profile', 'analytics_profile'],
+            'VS Info': ['vs_analytics','policies_datascript_info'],
+            'Pool Info': ['pools_info'],
+            'Security': ['ssl_profile'],
+            'VRF Info' : ['bgp_profile'],
+            'License Info' : ['license'],
+            'Cluster Info' : ['cluster_state'],
+            'SE Info': ['se_vs_distribution'],
+            'OBJ count': ['total_objs']
+        }
+        offset = {}
+        for key in tabs:
+            offset[key] = 0
+        for tab in tabs:
+            for section in tabs[tab]:          
+                df1 = pd.Series(report[section],name=section).to_frame()
+                df1.transpose().to_excel(writer, startrow = offset[tab], sheet_name=tab)
+                worksheet1 = writer.sheets[tab]
+                offset[tab] = offset[tab] + 3
+                worksheet1.set_column('A:F', 15) 
         writer.save()
 
 if __name__ == "__main__":
