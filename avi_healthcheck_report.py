@@ -7,6 +7,7 @@ import pandas as pd
 from collections import OrderedDict
 from pandas.io.json import json_normalize
 from datetime import date
+import csv
 
 class K8s():
     def __init__(self, file_path):
@@ -675,13 +676,6 @@ class Avi(object):
 
     def write_report(self, name, report):
         writer = pd.ExcelWriter(name, engine='xlsxwriter')
-        #JDA
-        #Total Objects
-        #df = pd.Series(report['total_objs'],name='Item').to_frame()
-        #df.to_excel(writer, sheet_name='Total Objects')
-        #worksheet = writer.sheets['Total Objects']
-        #worksheet.set_row(0, None, None, {'hidden': True})
-        #worksheet.set_column('A:B', 40)
         #Service Engine Group breakdown
         offset = 0
         for key in report['se_groups']:
@@ -713,7 +707,7 @@ class Avi(object):
             'License Info' : ['license'],
             'Cluster Info' : ['cluster_state'],
             'SE Info': ['se_vs_distribution'],
-            'OBJ count': ['total_objs']
+            'Total Objs': ['total_objs']
         }
         offset = {}
         for key in tabs:
@@ -724,7 +718,21 @@ class Avi(object):
                 df1.transpose().to_excel(writer, startrow = offset[tab], sheet_name=tab)
                 worksheet1 = writer.sheets[tab]
                 offset[tab] = offset[tab] + 3
-                worksheet1.set_column('A:F', 15) 
+                worksheet1.set_column('A:F', 15)
+        #Add Legend tab
+        legend={}
+        with open('avi_healthcheck_report_legend.csv', 'rb') as csvfile:
+            data = csv.reader(csvfile, delimiter=',')
+            for row in data:
+                legend[row[0]] = row[1]
+        
+        pd_report = json_normalize(legend)
+        df = pd.DataFrame(pd_report).transpose()
+        df.to_excel(writer, sheet_name='LEGEND')
+        worksheet = writer.sheets['LEGEND']
+        worksheet.set_column('A:A', 40)
+        worksheet.set_column('B:B', 80)
+        worksheet.set_row(0, None, None, {'hidden': True})
         writer.save()
 
 if __name__ == "__main__":
