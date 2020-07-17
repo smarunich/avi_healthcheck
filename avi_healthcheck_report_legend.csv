@@ -1,0 +1,215 @@
+ATTRIBUTE,DESCRIPTION,
+General Settings.backup_to_remote_host,"Description: In case of the controller backup is lost or overwritten - it's an absolute necessity to have the current config saved externally. (the config can be encrypted if needed)
+Recommended value/Threshold: True is recommended"
+General Settings.backup_enabled,"Description: it's absolutely critical to have the config saved to protect from the controller config damaged or loss of the cotroller
+Recommended value/Threshold: True is recommended"
+General Settings.tenant_count,"Description: Tenant number is more informational and allows to understand the customer environment
+Recommended value/Threshold: there is no specfic value that is recommended, but the maximum limit needs to be confirmed"
+General Settings.default_ntp,"Description: the lack of configured time sources can cause multiple issues - from the log timing drift to the synchronization issues between NSX ALB components
+Recommended value/Threshold: NTP servers need to be configured and validated"
+alerts,"Description: Alerts can be critical to the performance and functionality of NSX ALB
+Recommended value/Threshold: if alerts listed - they need to be troughtfully reviewed"
+total_objs.VsVip_EW,"Description: East-West (within datacenter traffic) VSes are affecting overall performance of the system
+Recommended value/Threshold: the value below 1500 is recommended"
+total_objs.VsVip_NS,"Description: North-South (external traffic)  VSes are affecting overall performance of the system
+Recommended value/Threshold: the value below 2000 is recommended"
+total_objs.VrfContext,"Description: Number if VRFs is limited as it takes resources.
+Recommended value/Threshold: Pre-18.x code was less than 40, lifted up to 250 in 18.x"
+total_objs.Pool,"Description: We need to be aware of the amount of pools as it can cause performance hit, even there is no real number as of today
+Recommended value/Threshold: 1000 pools per VS, 1000 pools in pool group"
+total_objs.VIMgrVMRuntime,"Description: Number of VMs in the vSphere environment - if really high - we need to review
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.ServiceEngineGroup,"Description: Service Engine groups should be in managable numbers - even the number doesn't have hard limit
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.Network,"Description: Total number of networks in your vSphere environment - being mindful of that number helps to size the environment
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.VsVip,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.ServiceEngine,"Description: There is a limitation around total number of Ses in the environment that needs to be respcted
+Recommended value/Threshold: 200 SE per environment (need to be validated"
+total_objs.VIMgrVcenterRuntime,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.VIMgrClusterRuntime,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.VIMgrHostRuntime,"Description: Number of the hosts in vSphere environment
+Recommended value/Threshold: Refer to to vSphere documentation for the details and limits"
+total_objs.VirtualService,"Description: Number of Virtual services in this environment
+Recommended value/Threshold: in 18.x - the limit is 1k VS per SE and 5k VS for Avi environment"
+total_objs.DebugVirtualService,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.VIMgrNWRuntime,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+total_objs.VIMgrSEVMRuntime,"Description: Total SEs running as VMs in Vmware environment
+Recommended value/Threshold: limit comes to Vmware limits and 200 SEs per Avi environment limit"
+SEG Info.vcpus_per_se,"Description: the both ends of the limit are important - single CPU can't be not enough, too many can be the license/resources waste
+Recommended value/Threshold: 2-8 CPUs are acceptable "
+SEG Info.Default-Group.placement_mode,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+SEG Info.memory_per_se,"Description: The same as SE CPU - we need to make sure we have enough memory here
+Recommended value/Threshold: 2 Gb is the minimum"
+SEG Info.algo,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+SEG Info.log_disksz,"Description: Please refer to https://avinetworks.com/docs/17.1/sizing-service-engines/ 
+Recommended value/Threshold: 10 Gb is default limit"
+SEG Info.vcenter_datastore_mode,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+SEG Info.max_scaleout_per_vs,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+SEG Info.connection_memory_percentage,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+SEG Info.extra_config_multiplier,"Description: Multiplier for extra config to support large vs/pool config.
+Recommended value/Threshold: Default is 0"
+SEG Info.extra_shared_config_memory,"Description: Extra config memory to support large Geo DB configuration
+Recommended value/Threshold: Default is 0"
+SEG Info.min_scaleout_per_vs,"Description: Minimum number of active Service Engines for the Virtual Service. Allowed values are 1-64.
+Recommended value/Threshold: Depends on the fault toleration requirements and the type of cloud in use."
+SEG Info.max_se,"Description: Maximum number of services engines in this group
+Recommended value/Threshold: Allowed values are 0-1000. Default is 10."
+SEG Info.max_vs_per_se,"Description: Maximum number of virtual services that can be placed on a single service engine.
+Recommended value/Threshold: Allowed values are 1-1000. Default is 10"
+SEG Info.vcenter_datastores_include,"Description: Placeholder for description of property vcenter_datastores_include of obj type ServiceEngineGroup field type str type boolean.
+Recommended value/Threshold: "
+SEG Info.vcenter_folder,"Description:  Folder to place all the Service Engine virtual machines in vCenter
+Recommended value/Threshold: "
+se_vs_distribution.Petr-se-xdbav.nw_vs,"Description: Total number of VS placed on the Service Engine
+Recommended value/Threshold: <specify value(s) and explanation here>"
+se_vs_distribution.Petr-se-kimwm.nw_vs,"Description: Total number of VS placed on the Service Engine
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cluster_state.up_since,"Description: Controller Cluster up since
+Recommended value/Threshold: NA"
+cluster_state.progress,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cluster_state.state,"Description: Provides operational state of cluster.
+Recommended value/Threshold: Depends on Cluster is single node or 3-node. Expected value for Single node is CLUSTER_UP_NO_HA and 3-node is CLUSTER_UP_HA_ACTIVE"
+app_profile.total,"Description: Total number of sytem default and custom application profile
+Recommended value/Threshold: NA"
+app_profile.total_http,"Description: Total number of sytem default and custom  HTTP profile
+Recommended value/Threshold: NA"
+app_profile.no_mux_http,"Description: Count of HTTP profiles having multiplexing enabled.
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/connection-multiplex/"
+app_profile.http_to_https,"Description: Count of HTTP profiles having http to https redirect enabled
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/redirect-http-to-https/"
+app_profile.preserve_client_ip,"Description: Count of HTTP profiles having preserve client IP enabled
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/preserve-client-ip/"
+net_profile.total,"Description: Total number of Network profile
+Recommended value/Threshold: NA"
+net_profile.tcpproxy_manual,"Description: Count of TCP profile having custom TCP Proxy Settings
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/templates/profiles/tcpudp-profile/#custom"
+net_profile.tcpproxy_nagles,"Description: Count of TCP profile having nagles alogrithm enalbed
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/templates/profiles/tcpudp-profile/#custom"
+net_profile.tcpfast_dsr,"Description: Count of TCP profile having Direct Server Return enabled.
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/templates/profiles/tcpudp-profile/#tcp-fast-path"
+policies_datascript_info.ds_refs,"Description: Count of DataScript reference in Virtual Services
+Recommended value/Threshold: NA"
+policies_datascript_info.l4_refs,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+vs_analytics.non_significant,"Description: Count of Virtual Service having Non-Significant logs enabled in VS Analytics
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/applications/virtual-services/create-virtual-service/#non-significant-logs"
+vs_analytics.all_headers,"Description: Count of Virtual Service having All header enabled in VS Analytics
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/applications/virtual-services/create-virtual-service/#non-significant-logs"
+vs_analytics.realtime_metrics,"Description: Count of Virtual Serivce having Realtime metics enabled in VS Analytics
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/applications/virtual-services/create-virtual-service/#analytics"
+vs_analytics.client_insights,"Description: Count of Virtual Service having Client insight enabled in VS Analytics
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/architectural-overview/applications/virtual-services/create-virtual-service/#client-insights"
+analytics_profile.stream_logs,"Description: Count of Analytics profile that streams client Log to external log server
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/streaming-avi-logs-to-external-server/"
+total_pools.ref_default_hm,"Description: Count of pools refering system default health monitor
+Recommended value/Threshold: NA"
+total_pools.ref_custom_hm,"Description: Count of pools refering customer health monitor
+Recommended value/Threshold: NA"
+total_pools.server_reselect_enabled,"Description: Total pools with server reselect configuration for http requests.
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/http-server-reselect/"
+total_pools.ref_application_persistence_profile,"Description: Total pools with a persistence profile configured.
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/overview-of-server-persistence/"
+total_pools.passive_hm_enabled,"Description: Total pools with passive health monitors configued.
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/overview-of-health-monitors/"
+total_ssl_prof.comp_rating_SCORE_EXCELLENT,"Description: Total SSL/TLS profiles rated with the highest score compatibility wise
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/ssl-tls-profile/"
+total_ssl_prof.sec_score_100,"Description: Total SSL/TLS profiles rated with the highest score security wise
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/ssl-tls-profile/"
+total_ssl_prof.perf_rating_SCORE_EXCELLENT,"Description: Total SSL/TLS profiles rated with the highest score performance wise
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/ssl-tls-profile/"
+total_ssl_prof.comp_rating_SCORE_non-EXCELLENT,"Description: Total SSL/TLS profiles rated without the highest score compatibility wise
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/ssl-tls-profile/"
+total_ssl_prof.sec_score_below_100,"Description: Total SSL/TLS profiles rated without the highest score security wise
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/ssl-tls-profile/"
+total_ssl_prof.perf_rating_SCORE_non-EXCELLENT,"Description: Total SSL/TLS profiles rated without the highest score performance wise
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/ssl-tls-profile/"
+total_bgp_prof.default_hold_time,"Description: Total BGP profiles configured with a Hold Time value of 180 seconds (default)
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/bgp-support-for-virtual-services/"
+total_bgp_prof.hold_time_less_then_default,"Description: Total BGP profiles configured with a Hold Time value different than the default of 180 seconds
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/bgp-support-for-virtual-services/"
+total_bgp_prof.default_keepalive_interval,"Description: Total BGP profiles configured with a Keep Alive value of 60 seconds (default)
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/bgp-support-for-virtual-services/"
+total_bgp_prof.keepalive_interval_less_then_default,"Description: Total BGP profiles configured with a Keep Alive value less than the default of 60 seconds
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/bgp-support-for-virtual-services/"
+total_se_debug_flag.enabled,"Description: Total number of Service Engines with the debug flag enabled
+Recommended value/Threshold:  This setting is used for debugging purposes and should not be left enabled if not required."
+total_cert.near_to_expire_in_60days,"Description: Total number of certificates with an expiry date of less than 60 days away from the date of the data collection.
+Recommended value/Threshold: "
+license.expired,"Description: Total number of expired NSX-ALB licenses
+Recommended value/Threshold: "
+license.valid,"Description: Total number of valid NSX-ALB licenses
+Recommended value/Threshold: "
+license._name_Eval_elapsed_days,"Description: Number of days elapsed since license expiration date.
+Recommended value/Threshold: "
+license._name_Trial_days_valid,"Description: Number of days valid until license expiration date.
+Recommended value/Threshold:"
+hm_interval.less_then_default_send_interval,"Description: Number of health monitors with send interval values different than the default values.
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/overview-of-health-monitors/"
+cloud.Petr-se-xdbav_object_id,"Description: Internal object ID for VMware type clouds
+Recommended value/Threshold:"
+cloud.Petr-se-xdbav_host_placement,"Description: Object reference for the ESXi host where the SE VM is placed
+Recommended value/Threshold: "
+cloud.vcenter_url,"Description: vCenter URL for VMware type cloud
+Recommended value/Threshold: "
+cloud.Petr-se-xdbav_antiaffinity_name,"Description: Anti-affinity rule names configured on the cluster where SEs are deployed on VMware type clouds 
+Recommended value/Threshold:"
+cloud.Petr_controller1_drs_setting,"Description: Cluster DRS setting configured on the cluster where controller nodes  are deployed on VMware type clouds 
+Recommended value/Threshold:"
+cloud.Petr_controller1_host_placement,"Description: Object reference for the ESXi host where the controller VM is placed
+Recommended value/Threshold: "
+cloud.Petr-se-xdbav_drs_setting,"Description: Cluster DRS setting configured on the cluster where SEs are deployed on VMware type clouds 
+Recommended value/Threshold:"
+cloud.prefer_static_routes,"Description: Setting to prefer Static Routes vs Directly Connected Network
+Recommended value/Threshold: https://avinetworks.com/docs/18.2/virtual-service-placement-settings/"
+cloud.Petr-se-kimwm_antiaffinity_setting,"Description: Anti-affinity rule type configured on the cluster where SEs are deployed on VMware type clouds 
+Recommended value/Threshold:"
+cloud.Petr-se-xdbav_cluster,"Description: Object name for the VMware cluster where the SE VM is placed
+Recommended value/Threshold: "
+cloud.dhcp_enabled,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.discovered_datacenter,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.management_nw,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr_controller1_antiaffinity_setting,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-kimwm_cluster,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr_controller1_num_cpu,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-xdbav_antiaffinity_setting,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-kimwm_drs_setting,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.privilege,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-xdbav_connection_state,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr_controller1_memory,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.vcenter_version,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.wdc-06-vc10c01_defaultVmBehavior,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-kimwm_object_id,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-kimwm_antiaffinity_name,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-kimwm_connection_state,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr-se-kimwm_host_placement,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
+cloud.Petr_controller1_antiaffinity_name,"Description: <put the description here>
+Recommended value/Threshold: <specify value(s) and explanation here>"
