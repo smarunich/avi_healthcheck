@@ -62,8 +62,6 @@ class Avi(object):
             self.alerts = json.load(file_name)['results']
         report = OrderedDict()
         report.update({'total_objs': self.total_objs()})
-        #print type(self.total_objs())
-        #print self.total_objs()
         report.update({'se_groups': self.se_groups()})
         report.update({'se_vs_distribution': self.se_vs_distribution()})
         #TODO dns_vs_state doesn't always exist
@@ -73,19 +71,18 @@ class Avi(object):
         report.update({'backup_enabled': self.backup_enabled()})
         report.update({'tenant_count': self.tenant_count()})
         report.update({'default_ntp': self.default_ntp()})
-        report.update({'app_profile': self.app_profile()})
-        report.update({'net_profile': self.net_profile()})
-        report.update({'policies_datascript_info': self.policies_datascript_info()})
-        report.update({'vs_analytics': self.vs_analytics()})
-        report.update({'analytics_profile': self.analytics_profile()})
-        report.update({'pools_info': self.pools_info()})
-        report.update({'ssl_profile': self.ssl_profile()})
+        report.update({'ssl_profile_details': self.ssl_profile_details()})
         report.update({'bgp_profile': self.bgp_profile()})
         report.update({'total_se_debug_flag': self.total_se_debug_flag()})
         report.update({'total_cert': self.total_cert()})
         report.update({'license': self.license()})
         report.update({'hm_interval': self.hm_interval()})
         report.update({'alerts': self.alerts})
+        report.update({'net_profile_details': self.net_profile_details()})
+        report.update({'app_profile_details': self.app_profile_details()})
+        report.update({'analytics_profile_details': self.analytics_profile_details()})
+        report.update({'vs_info_details': self.vs_info_details()})
+        report.update({'pool_info_details': self.pool_info_details()})
         if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
             report.update({'cloud': self.cloud_oshiftk8s()})
             report.update({'lingering_tenants': self.find_lingering_tenants()})
@@ -382,196 +379,186 @@ class Avi(object):
         except:
             default_ntp = False
         return default_ntp
-    def app_profile(self):
-        app_profile = OrderedDict()
-        app_profile['total'] = len(self.config['ApplicationProfile'])
-        #HTTP profiles info
-        no_mux_http = 0
-        http_to_https = 0
-        total_http = 0
-        try:
-            for row in self.config['ApplicationProfile']:
-                if row['type'] == 'APPLICATION_PROFILE_TYPE_HTTP':
-                    total_http += 1
-                    if not row['http_profile']['connection_multiplexing_enabled']:
-                        no_mux_http += 1
-                    if row['http_profile']['http_to_https']:
-                        http_to_https += 1
-            app_profile['total_http'] = total_http
-            app_profile['no_mux_http'] = no_mux_http
-            app_profile['http_to_https'] = http_to_https
-        except:
-            app_profile['no_mux_http'] = 0
-            app_profile['no_mux_http'] = 0
-            app_profile['http_to_https'] = 0
-        #Preserve client IP
-        try:
+    ###Check####
+    def app_profile_details(self):
+        app_profile_details = OrderedDict()
+        app_profile_details['AppProfileName'] = ['Type','Tenant','no_mux_http','http_to_https','preserve_client_ip']
+        for row in self.config['ApplicationProfile']:
+            no_mux_http = 0
+            http_to_https = 0
             preserve_client_ip = 0
-            for row in self.config['ApplicationProfile']:
+            try:
+                if row['type'] == 'APPLICATION_PROFILE_TYPE_HTTP':
+                    if not row['http_profile']['connection_multiplexing_enabled']:
+                        no_mux_http = 1
+                    if row['http_profile']['http_to_https']:
+                        http_to_https = 1
                 if row['preserve_client_ip']:
-                    preserve_client_ip += 1
-            app_profile['preserve_client_ip'] = preserve_client_ip
-        except:
-            app_profile['preserve_client_ip'] = 0
-        
-        return app_profile
-    def net_profile(self):
-        net_profile = OrderedDict()
-        net_profile['total'] = len(self.config['NetworkProfile'])
-        #TCP-Proxy with manual config params
-        try:
+                    preserve_client_ip = 1
+                tenant = row['tenant_ref'].split('=')[1]
+                app_profile_details[row['name']] = [row['type'],tenant,no_mux_http,http_to_https,preserve_client_ip]   
+            except: 
+                pass  
+        #summary row
+        summary = [0] * len(app_profile_details['AppProfileName'])        
+        for row in app_profile_details:
+            if app_profile_details[row][0] != 'Type':
+                for idx, item in enumerate(app_profile_details[row]):
+                    if isinstance(item,int):
+                        summary[idx] += item
+                    else:
+                        summary[idx] += 1
+        app_profile_details['TOTALS'] = summary       
+        return app_profile_details
+    def net_profile_details(self):
+        net_profile_details = OrderedDict()
+        net_profile_details['NetProfileName'] = ['Type','Tenant','tcpproxy_manual','tcpproxy_nagles','tcpfast_dsr']
+        for row in self.config['NetworkProfile']:
             tcpproxy_manual = 0
             tcpproxy_nagles = 0
-            for row in self.config['NetworkProfile']:
+            tcpfast_dsr = 0
+            try:
                 if row['profile']['type'] == 'PROTOCOL_TYPE_TCP_PROXY':
                     if not row['profile']['tcp_proxy_profile']['automatic'] :
-                        tcpproxy_manual += 1
-                        if row['profile']['tcp_proxy_profile']['nagles_algorithm']:
-                            tcpproxy_nagles += 1
-            net_profile['tcpproxy_manual'] = tcpproxy_manual
-            net_profile['tcpproxy_nagles'] = tcpproxy_nagles
-        except:
-            net_profile['tcpproxy_manual'] = 0
-            net_profile['tcpproxy_nagles'] = 0
-        #TCP-FastPath with DSR
-        try:
-            tcpfast_dsr = 0
-            for row in self.config['NetworkProfile']:
+                            tcpproxy_manual = 1
+                            if row['profile']['tcp_proxy_profile']['nagles_algorithm']:
+                                tcpproxy_nagles = 1  
                 if row['profile']['type'] == 'PROTOCOL_TYPE_TCP_FAST_PATH':
-                    if row['profile']['tcp_fast_path_profile'].get('dsr_profile'):
-                        tcpfast_dsr += 1
-            net_profile['tcpfast_dsr'] = tcpfast_dsr
-        except:
-            net_profile['tcpfast_dsr'] = 0
-        return net_profile
-    def policies_datascript_info(self):
-        policies_datascript_info = OrderedDict()
-        ds_refs = 0
-        l4_refs = 0
-        try:
-            for row in self.config['VirtualService']:
-                if re.search(self.cloud['name'], row['cloud_ref']):
-                    if row.get('vs_datascripts'):
-                        ds_refs += 1
-                    if row.get('l4_policies'):
-                        l4_refs += 1
-            policies_datascript_info['ds_refs'] = ds_refs
-            policies_datascript_info['l4_refs'] = l4_refs
-        except:
-            policies_datascript_info['ds_refs'] = 0
-            policies_datascript_info['l4_refs'] = 0
-        return policies_datascript_info
-    def vs_analytics(self):
-        vs_analytics = OrderedDict()
-        non_significant = 0
-        all_headers = 0
-        realtime_metrics = 0
-        client_insights = 0
-        try:
-            for row in self.config['VirtualService']:
+                        if row['profile']['tcp_fast_path_profile'].get('dsr_profile'):
+                            tcpfast_dsr = 1
+            except: 
+                pass
+            tenant = row['tenant_ref'].split('=')[1]
+            net_profile_details[row['name']] = [row['profile']['type'],tenant,tcpproxy_manual,tcpproxy_nagles,tcpfast_dsr]
+        #summary row
+        summary = [0] * len(net_profile_details['NetProfileName'])        
+        for row in net_profile_details:
+            if net_profile_details[row][0] != 'Type':
+                for idx, item in enumerate(net_profile_details[row]):
+                    if isinstance(item,int):
+                        summary[idx] += item
+                    else:
+                        summary[idx] += 1
+        net_profile_details['TOTALS'] = summary
+        return net_profile_details
+    
+    def vs_info_details(self):
+        vs_info_details = OrderedDict()
+        vs_info_details['VSName'] = ['Tenant','non_significant','all_headers','realtime_metrics','client_insights','ds_refs','l4_refs']
+        for row in self.config['VirtualService']:
+            non_significant = 0
+            all_headers = 0
+            realtime_metrics = 0
+            client_insights = 0
+            ds_refs = 0
+            l4_refs = 0
+            try:
                 if re.search(self.cloud['name'], row['cloud_ref']):
                     if row['analytics_policy']['full_client_logs']['enabled'] and row['analytics_policy']['full_client_logs']['duration'] == 0:
-                        non_significant += 1
+                        non_significant = 1
                     if row['analytics_policy']['all_headers']:
-                        all_headers += 1
+                        all_headers = 1
                     if row['analytics_policy']['metrics_realtime_update']['enabled'] and row['analytics_policy']['metrics_realtime_update']['duration'] == 0:
-                        realtime_metrics += 1
+                        realtime_metrics = 1
                     if row['analytics_policy']['client_insights'] != 'NO_INSIGHTS':
-                        client_insights += 1
-            vs_analytics['non_significant'] = non_significant
-            vs_analytics['all_headers'] = all_headers
-            vs_analytics['realtime_metrics'] = realtime_metrics
-            vs_analytics['client_insights'] = client_insights
-        except:
-            vs_analytics['non_significant'] = 0
-            vs_analytics['all_headers'] = 0
-            vs_analytics['realtime_metrics'] = 0
-            vs_analytics['client_insights'] = 0        
-        return vs_analytics
-    def analytics_profile(self):
-        analytics_profile = OrderedDict()
+                        client_insights = 1
+                    if row.get('vs_datascripts'):
+                        ds_refs = 1
+                    if row.get('l4_policies'):
+                        l4_refs = 1
+            except:
+                pass
+            tenant = row['tenant_ref'].split('=')[1]
+            vs_info_details[row['name']] = [tenant,non_significant,all_headers,realtime_metrics,client_insights,ds_refs,l4_refs]       
+        return vs_info_details
+    def analytics_profile_details(self):
+        analytics_profile_details = OrderedDict()
+        analytics_profile_details['AnalyticsProfileName'] = ['Tenant','stream_logs']
         stream_logs = 0
-        try:
-            for row in self.config['AnalyticsProfile']:
+        for row in self.config['AnalyticsProfile']:
+            try:
                 if row.get('client_log_streaming_config'): 
-                    stream_logs += 1
-            analytics_profile['stream_logs'] = stream_logs       
-        except:
-            analytics_profile['stream_logs'] = 0     
-        return analytics_profile
-    def pools_info(self):
-        pools_info = OrderedDict()
-        pools_info['ref_default_hm'] = 0
-        pools_info['ref_custom_hm'] = 0
-        pools_info['server_reselect_enabled'] = 0
-        # pools_info['ser_reselect_f'] = 0
-        pools_info['ref_application_persistence_profile'] = 0
-        pools_info['passive_hm_enabled'] = 0
+                    stream_logs = 1      
+            except:
+                pass
+            tenant = row['tenant_ref'].split('=')[1]
+            analytics_profile_details[row['name']] = [tenant,stream_logs]
+        #summary row
+        summary = [0] * len(analytics_profile_details['AnalyticsProfileName'])        
+        for row in analytics_profile_details:
+            if analytics_profile_details[row][0] != 'Tenant':
+                for idx, item in enumerate(analytics_profile_details[row]):
+                    if isinstance(item,int):
+                        summary[idx] += item
+                    else:
+                        summary[idx] += 1 
+        analytics_profile_details['TOTALS'] = summary    
+        return analytics_profile_details
+    def pool_info_details(self):
+        pool_info_details = OrderedDict()
+        pool_info_details['PoolName'] = ['Tenant','ref_default_hm','server_reselect_enabled','ref_application_persistence_profile','passive_hm_enabled']
         default_hm = ['System-HTTP','System-HTTPS','System-Ping','System-TCP','System-UDP','System-DNS','System-Xternal-Perl','System-Xternal-Shell', \
                       'System-Xternal-Python','System-PingAccessAgent','System-GSLB-Ping','System-GSLB-TCP','System-GSLB-HTTP','System-GSLB-HTTPS','System-GSLB-UDP']
-
-        hm_type = ['HEALTH_MONITOR_HTTP','HEALTH_MONITOR_HTTPS','HEALTH_MONITOR_PING','HEALTH_MONITOR_PING','HEALTH_MONITOR_TCP','HEALTH_MONITOR_UDP', \
-                       'HEALTH_MONITOR_DNS','HEALTH_MONITOR_EXTERNAL']
-        for pool_obj in self.config['Pool']:
-            # cust_flag = 1
-            if re.search(self.cloud['name'], pool_obj['cloud_ref']):
-                if pool_obj.get('health_monitor_refs'):
-                    for pool_assign_hm in pool_obj['health_monitor_refs']:
-                        if (pool_assign_hm.split("="))[-1] in default_hm:
-                            pools_info['ref_default_hm'] += 1
-                        #     cust_flag = 0
-                        # if cust_flag:
-                        else:
-                            pools_info['ref_custom_hm'] += 1
-                        for hm_detail1 in self.config['HealthMonitor']:
-                            if hm_detail1['name'] == (pool_assign_hm.split("="))[-1]:
-                                if pools_info.has_key(hm_detail1['type']):
-                                    pools_info[hm_detail1['type']] +=1
-                                else:
-                                    pools_info[hm_detail1['type']] = 1
-                if pool_obj['inline_health_monitor']:
-                    pools_info['passive_hm_enabled'] += 1
-
-                if pool_obj['server_reselect']['retry_nonidempotent']:
-                    pools_info['server_reselect_enabled'] += 1
-                # else:
-                #     pools_info['ser_reselect_f'] += 1
-
-                try:
-                    persist_profile = pool_obj['ref_application_persistence_profile']
-                    if  persist_profile != "":
-                        pools_info['ref_application_persistence_profile'] += 1
-                except:
-                    pass
-        return pools_info
-    def ssl_profile(self):
-        ssl_profile = OrderedDict()
-        ssl_profile['comp_rating_SCORE_EXCELLENT'] = 0
-        ssl_profile['sec_score_100'] = 0
-        ssl_profile['perf_rating_SCORE_EXCELLENT'] = 0
-        ssl_profile['comp_rating_SCORE_non-EXCELLENT'] = 0
-        ssl_profile['sec_score_below_100'] = 0
-        ssl_profile['perf_rating_SCORE_non-EXCELLENT'] = 0
-        try:
-            for ssl_prof_att in self.config['SSLProfile']:
-
-                if (ssl_prof_att['ssl_rating']['compatibility_rating'] == "SSL_SCORE_EXCELLENT"):
-                    ssl_profile['comp_rating_SCORE_EXCELLENT'] += 1
-                else:
-                    ssl_profile['comp_rating_SCORE_non-EXCELLENT'] += 1
-
-                if (round(float(ssl_prof_att['ssl_rating']['security_score'])) == 100):
-                    ssl_profile['sec_score_100'] += 1
-                else:
-                    ssl_profile['sec_score_below_100'] += 1
-
-                if (ssl_prof_att['ssl_rating']['performance_rating'] == "SSL_SCORE_EXCELLENT"):
-                    ssl_profile['perf_rating_SCORE_EXCELLENT'] += 1
-                else:
-                    ssl_profile['perf_rating_SCORE_non-EXCELLENT'] += 1
-        except:
-            pass
-        return ssl_profile
+        for row in self.config['Pool']:
+            ref_default_hm = 0
+            server_reselect_enabled = 0
+            ref_application_persistence_profile = 0
+            passive_hm_enabled = 0
+            try:
+                if re.search(self.cloud['name'], row['cloud_ref']):
+                    if row.get('health_monitor_refs'):
+                        for hm_ref in row['health_monitor_refs']:
+                            if (hm_ref.split("="))[-1] in default_hm:
+                                ref_default_hm = 1  
+                    if row['inline_health_monitor']:
+                        passive_hm_enabled = 1
+                    if row['server_reselect']['retry_nonidempotent']:
+                        server_reselect_enabled = 1
+                    if row.get('ref_application_persistence_profile'): 
+                        ref_application_persistence_profile = 1
+            except:
+                pass
+            tenant = row['tenant_ref'].split('=')[1]
+            pool_info_details[row['name']] = [tenant,ref_default_hm,server_reselect_enabled,ref_application_persistence_profile,passive_hm_enabled]
+        summary = [0] * len(pool_info_details['PoolName'])        
+        for row in pool_info_details:
+            if pool_info_details[row][0] != 'Tenant':
+                for idx, item in enumerate(pool_info_details[row]):
+                    if isinstance(item,int):
+                        summary[idx] += item
+                    else:
+                        summary[idx] += 1
+        pool_info_details['TOTALS'] = summary                 
+        return pool_info_details
+    def ssl_profile_details(self):
+        ssl_profile_details = OrderedDict()
+        ssl_profile_details['SSLProfileName'] = ['Type','Tenant','comp_rating_SCORE_EXCELLENT','sec_score_100','perf_rating_SCORE_EXCELLENT']
+        comp_rating_SCORE_EXCELLENT = 0
+        sec_score_100 = 0
+        perf_rating_SCORE_EXCELLENT = 0
+        for row in self.config['SSLProfile']:
+            try:
+                if (row['ssl_rating']['compatibility_rating'] == "SSL_SCORE_EXCELLENT"):
+                    comp_rating_SCORE_EXCELLENT = 1
+                if (round(float(row['ssl_rating']['security_score'])) == 100):
+                    sec_score_100 = 1
+                if (row['ssl_rating']['performance_rating'] == "SSL_SCORE_EXCELLENT"):
+                    perf_rating_SCORE_EXCELLENT = 1
+            except:
+                pass
+            tenant = row['tenant_ref'].split('=')[1]
+            ssl_profile_details[row['name']] = [row['type'],tenant,comp_rating_SCORE_EXCELLENT,sec_score_100,perf_rating_SCORE_EXCELLENT]
+        summary = [0] * len(ssl_profile_details['SSLProfileName'])        
+        for row in ssl_profile_details:
+            if ssl_profile_details[row][0] != 'Type':
+                for idx, item in enumerate(ssl_profile_details[row]):
+                    if isinstance(item,int):
+                        summary[idx] += item
+                    else:
+                        summary[idx] += 1
+        ssl_profile_details['TOTALS'] = summary        
+            
+        return ssl_profile_details
     def bgp_profile(self):
         bgp_profile = OrderedDict()
         bgp_profile['default_hold_time'] = 0
@@ -673,7 +660,6 @@ class Avi(object):
             tenants_list.append(tenant['name'])
         lingering_tenants = list(set(tenants_list) - set(self.k8s.projects_list()) - set(['admin']))
         return lingering_tenants
-
     def write_report(self, name, report):
         writer = pd.ExcelWriter(name, engine='xlsxwriter')
         #Service Engine Group breakdown
@@ -699,10 +685,10 @@ class Avi(object):
         worksheet.set_column('A:B', 40)
         #Group info on tabs
         tabs = {
-            'Profiles': ['app_profile', 'net_profile', 'analytics_profile'],
-            'VS Info': ['vs_analytics','policies_datascript_info'],
-            'Pool Info': ['pools_info'],
-            'Security': ['ssl_profile'],
+            'Profiles': ['app_profile_details','net_profile_details','analytics_profile_details'],
+            'VS Info': ['vs_info_details'],
+            'Pool Info': ['pool_info_details'],
+            'Security': ['ssl_profile_details'],
             'VRF Info' : ['bgp_profile'],
             'License Info' : ['license'],
             'Cluster Info' : ['cluster_state'],
@@ -713,12 +699,22 @@ class Avi(object):
         for key in tabs:
             offset[key] = 0
         for tab in tabs:
-            for section in tabs[tab]:          
-                df1 = pd.Series(report[section],name=section).to_frame()
-                df1.transpose().to_excel(writer, startrow = offset[tab], sheet_name=tab)
-                worksheet1 = writer.sheets[tab]
-                offset[tab] = offset[tab] + 3
-                worksheet1.set_column('A:F', 15)
+            for section in tabs[tab]:
+                if not isinstance(report[section].items()[0][1],list) :
+                    df1 = pd.Series(report[section],name=section).to_frame()
+                    df1.transpose().to_excel(writer, startrow = offset[tab], sheet_name=tab)
+                    worksheet1 = writer.sheets[tab]
+                    worksheet1.set_column('A:F', 15)
+                    offset[tab] = offset[tab] + 3
+                else:
+                    ##detailed info has different format
+                    df1 = pd.DataFrame.from_dict(report[section],orient='index')
+                    df1.to_excel(writer, startrow = offset[tab], sheet_name=tab)
+                    worksheet1 = writer.sheets[tab]
+                    worksheet1.set_row(offset[tab] , None, None, {'hidden': True})
+                    worksheet1.set_column('A:F', 25)
+                    worksheet1.set_column('B:B', 30)
+                    offset[tab] = offset[tab] + len(report[section]) + 2
         #Add Legend tab
         legend={}
         with open('avi_healthcheck_report_legend.csv', 'rb') as csvfile:
