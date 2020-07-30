@@ -79,23 +79,23 @@ class Avi(object):
         self.cl_list = self._cluster_runtime()
 
         #TODO forloop with if statement clean up
-        for c in self.cc_list:
-            if c['vtype'] == 'CLOUD_OSHIFT_K8S':
-                self.k8s.append(K8s(k8s_cloud=c, private_key=self.private_key, output_dir=self.output_dir))
-                internals = self._get('cloud/' + c['uuid'] + '/internals')
-                for se_ip in self._se_local_addresses(cloud_uuid=c['uuid']):
-                    if internals['agents'][0]['oshift_k8s']['cfg']['se_deployment_method'] == 'SE_CREATE_SSH':
-                        for node in internals['agents'][0]['oshift_k8s']['hosts']:
-                            user = self._find_cc_user(cloud=c)
-                            self.node_connections.append(K8sNode(node['host_ip'], controllers=self.cl_list, output_dir=self.output_dir, **user))
-                    #TODO Does this need to be done for every cloud type?
-                    self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
-            elif c['vtype'] == 'CLOUD_VCENTER' and c['vcenter_configuration']['privilege'] == 'WRITE_ACCESS':
-                self.vcenter_session = Vmware(c['vcenter_configuration']['vcenter_url'], c['vcenter_configuration']['username'], decrypt_string(c['vcenter_configuration']['password'], self.private_key))
-                self.vmware_runtime = ['cluster','vimgrclusterruntime','vimgrsevmruntime','vimgrvcenterruntime']
-                fileName, jsondata = self.vcenter_session.gather_cluster_globals()
-                self._write(fileName, jsondata)
-                self._api_collection(self.vmware_runtime)
+        # for c in self.cc_list:
+        #     if c['vtype'] == 'CLOUD_OSHIFT_K8S':
+        #         self.k8s.append(K8s(k8s_cloud=c, private_key=self.private_key, output_dir=self.output_dir))
+        #         internals = self._get('cloud/' + c['uuid'] + '/internals')
+        #         for se_ip in self._se_local_addresses(cloud_uuid=c['uuid']):
+        #             if internals['agents'][0]['oshift_k8s']['cfg']['se_deployment_method'] == 'SE_CREATE_SSH':
+        #                 for node in internals['agents'][0]['oshift_k8s']['hosts']:
+        #                     user = self._find_cc_user(cloud=c)
+        #                     self.node_connections.append(K8sNode(node['host_ip'], controllers=self.cl_list, output_dir=self.output_dir, **user))
+        #             #TODO Does this need to be done for every cloud type?
+        #             self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
+        #     elif c['vtype'] == 'CLOUD_VCENTER' and c['vcenter_configuration']['privilege'] == 'WRITE_ACCESS':
+        #         self.vcenter_session = Vmware(c['vcenter_configuration']['vcenter_url'], c['vcenter_configuration']['username'], decrypt_string(c['vcenter_configuration']['password'], self.private_key))
+        #         self.vmware_runtime = ['cluster','vimgrclusterruntime','vimgrsevmruntime','vimgrvcenterruntime']
+        #         fileName, jsondata = self.vcenter_session.gather_cluster_globals()
+        #         self._write(fileName, jsondata)
+        #         self._api_collection(self.vmware_runtime)
 
 #Collection of each controllers statistics
         for c_ip in self.cl_list:
