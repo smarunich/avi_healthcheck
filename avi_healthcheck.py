@@ -3,7 +3,7 @@ import requests
 import re
 import json
 import argparse
-import cStringIO
+from io import StringIO
 import tarfile
 import datetime
 import getpass
@@ -262,7 +262,7 @@ class SSH_Base(object):
     def __init__(self, port=22, username=None, password=None, pem=None, output_dir=None):
         self.output_dir = output_dir
         if pem is not None:
-            self._pem = cStringIO.StringIO(pem)
+            self._pem = StringIO(pem)
             self._pem = paramiko.RSAKey.from_private_key(self._pem)
         else:
             self._pem = None
