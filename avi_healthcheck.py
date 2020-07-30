@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import requests
 import re
 import json
@@ -110,7 +110,7 @@ class Avi(object):
         try:
             decrypt_string(config.get('META',{}).get('test_string'), key)
         except:
-            print 'Invalid passphrase'
+            print('Invalid passphrase')
             sys.exit(1)
         self.private_key = key
         return key
@@ -200,7 +200,7 @@ class Avi(object):
         r = self.api.get(uri, params=params)
         page = 2
         data = r.json()
-        print "Collecting", uri + "..."
+        print("Collecting", uri + "...")
         while 'next' in r.json().keys():
           params.update({'page': page})
           r = self.api.get(uri, params=params)
@@ -208,7 +208,7 @@ class Avi(object):
           page += 1
         #TODO File name contain cloud name for non-global stats (ie: # ofobjects per cloud)
         file_name = re.sub('\W+','-', uri) + '-avi_healthcheck.json'
-        print "Writing", file_name + "..."
+        print("Writing", file_name + "...")
         self._write(file_name=file_name, data=data)
         return data
 
@@ -217,7 +217,7 @@ class Avi(object):
             with open(self.output_dir + '/' + file_name, 'w') as fh:
                 json.dump(data, fh)
         except Exception as e:
-            print e.message
+            print(e.message)
 
     def archive(self):
         archive_name = self.output_dir + '/' + self.host + '-avi_healthcheck-' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.tar.gz'
@@ -296,10 +296,10 @@ class SSH_Base(object):
                             port=self.local_port,
                             username=self.username,
                             pkey=self._pem)
-            print "Connected to host: %s" % self.local_ip
+            print("Connected to host: %s" % self.local_ip)
         except Exception as e:
-            print "Failed to connect to host: %s" % self.local_ip
-            print e.message
+            print("Failed to connect to host: %s" % self.local_ip)
+            print(e.message)
             ssh = None
         return ssh
 
@@ -309,7 +309,7 @@ class SSH_Base(object):
             if sudo:
                 command = 'sudo ' + command
             # TODO print is just for some feedback
-            print command
+            print(command)
             cmd = {'command': command}
             sin, sout, serr = self._ssh.exec_command(command, get_pty=True)
             if sudo and self.password is not None:
@@ -459,15 +459,15 @@ class K8s(object):
 
     def _k8s_api(self, api, cmd):
         try:
-            print api, cmd
+            print(api, cmd)
             response = getattr(api, cmd)()
             flat = kubernetes.client.ApiClient().sanitize_for_serialization(response)
             with open(self.output_dir + '/' + 'k8s-' + cmd + '-avi_healthcheck.json', 'w') as fh:
                 json.dump(flat, fh)
             return response
         except ApiException as e:
-            print 'K8s exception with %s' % cmd
-            print e
+            print('K8s exception with %s' % cmd)
+            print(e)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
