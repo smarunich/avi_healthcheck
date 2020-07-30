@@ -119,147 +119,147 @@ class Avi(object):
                 total_objs.pop(obj_type)
         return total_objs
 
-    def cloud_vmware(self):
-        vmware_configuration = OrderedDict()
-        with open(self.file_path + '/cluster-avi_healthcheck.json') as file_name:
-            cluster = json.load(file_name)
-        with open(self.file_path + '/vimgrvcenterruntime-avi_healthcheck.json') as file_name:
-            vcenter_runtime = json.load(file_name)['results'][0]
-        with open(self.file_path + '/vimgrclusterruntime-avi_healthcheck.json') as file_name:
-            vcenter_cluster_runtime = json.load(file_name)['results']
-        with open(self.file_path + '/vimgrsevmruntime-avi_healthcheck.json') as file_name:
-            vcenter_sevm_runtime = json.load(file_name)['results']
-        #TODO Re-Use self.cloud??
-        for cloud_obj in self.config['Cloud']:
-            if re.search(self.cloud['name'], cloud_obj['name']):
-                vmware_configuration = {
-                    'vcenter_url':
-                        cloud_obj['vcenter_configuration']['vcenter_url'],
-                    'privilege':
-                        cloud_obj['vcenter_configuration']['privilege'],
-                     #TODO some type of regex for pg-xxx   
-                     #TODO Cloud get doesn't include_name
-                     #re.search(r'(?<=#).*',cloud_obj['vcenter_configuration']['management_network']).group()
-                    'management_nw': 
-                        cloud_obj['vcenter_configuration']['management_network'],
-                    'dhcp_enabled':
-                        cloud_obj['dhcp_enabled'],
-                    'prefer_static_routes':
-                        cloud_obj['prefer_static_routes'],
-                    'vcenter_version':
-                        vcenter_runtime['vcenter_fullname'],
-                    'discovered_datacenter':
-                        vcenter_runtime['discovered_datacenter']
-                }
-        vcenter_cluster_config = VMWare(self.file_path, self.cloud['vcenter_configuration']['vcenter_url'])
+    # def cloud_vmware(self):
+    #     vmware_configuration = OrderedDict()
+    #     with open(self.file_path + '/cluster-avi_healthcheck.json') as file_name:
+    #         cluster = json.load(file_name)
+    #     with open(self.file_path + '/vimgrvcenterruntime-avi_healthcheck.json') as file_name:
+    #         vcenter_runtime = json.load(file_name)['results'][0]
+    #     with open(self.file_path + '/vimgrclusterruntime-avi_healthcheck.json') as file_name:
+    #         vcenter_cluster_runtime = json.load(file_name)['results']
+    #     with open(self.file_path + '/vimgrsevmruntime-avi_healthcheck.json') as file_name:
+    #         vcenter_sevm_runtime = json.load(file_name)['results']
+    #     #TODO Re-Use self.cloud??
+    #     for cloud_obj in self.config['Cloud']:
+    #         if re.search(self.cloud['name'], cloud_obj['name']):
+    #             vmware_configuration = {
+    #                 'vcenter_url':
+    #                     cloud_obj['vcenter_configuration']['vcenter_url'],
+    #                 'privilege':
+    #                     cloud_obj['vcenter_configuration']['privilege'],
+    #                  #TODO some type of regex for pg-xxx   
+    #                  #TODO Cloud get doesn't include_name
+    #                  #re.search(r'(?<=#).*',cloud_obj['vcenter_configuration']['management_network']).group()
+    #                 'management_nw': 
+    #                     cloud_obj['vcenter_configuration']['management_network'],
+    #                 'dhcp_enabled':
+    #                     cloud_obj['dhcp_enabled'],
+    #                 'prefer_static_routes':
+    #                     cloud_obj['prefer_static_routes'],
+    #                 'vcenter_version':
+    #                     vcenter_runtime['vcenter_fullname'],
+    #                 'discovered_datacenter':
+    #                     vcenter_runtime['discovered_datacenter']
+    #             }
+    #     vcenter_cluster_config = VMWare(self.file_path, self.cloud['vcenter_configuration']['vcenter_url'])
         
-        for sevm in vcenter_sevm_runtime:
-            vmware_configuration[sevm['name']+'_object_id'] = \
-                sevm['managed_object_id']
-            vmware_configuration[sevm['name']+'_connection_state'] = \
-                sevm['connection_state']
-            vmware_configuration[sevm['name']+'_host_placement'] = \
-                sevm['host_ref']
-            for cluster_run in vcenter_cluster_runtime:
-                for host in cluster_run['host_refs']:
-                    if host == sevm['host_ref']:
-                        vmware_configuration[cluster_run['name']+'_defaultVmBehavior'] = vcenter_cluster_config.search(cluster_run['name'], "drsConfig", "defaultVmBehavior")
-                        vmware_configuration[sevm['name']+'_cluster'] = \
-                            cluster_run['name']
-                        vmware_configuration[sevm['name']+'_drs_setting'] = \
-                            vcenter_cluster_config.drs_search(cluster_run['name'], sevm['managed_object_id'])
-                        rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], sevm['managed_object_id'])
-                        vmware_configuration[sevm['name']+'_antiaffinity_name'] = rule_name
-                        vmware_configuration[sevm['name']+'_antiaffinity_setting'] = rule_type
+    #     for sevm in vcenter_sevm_runtime:
+    #         vmware_configuration[sevm['name']+'_object_id'] = \
+    #             sevm['managed_object_id']
+    #         vmware_configuration[sevm['name']+'_connection_state'] = \
+    #             sevm['connection_state']
+    #         vmware_configuration[sevm['name']+'_host_placement'] = \
+    #             sevm['host_ref']
+    #         for cluster_run in vcenter_cluster_runtime:
+    #             for host in cluster_run['host_refs']:
+    #                 if host == sevm['host_ref']:
+    #                     vmware_configuration[cluster_run['name']+'_defaultVmBehavior'] = vcenter_cluster_config.search(cluster_run['name'], "drsConfig", "defaultVmBehavior")
+    #                     vmware_configuration[sevm['name']+'_cluster'] = \
+    #                         cluster_run['name']
+    #                     vmware_configuration[sevm['name']+'_drs_setting'] = \
+    #                         vcenter_cluster_config.drs_search(cluster_run['name'], sevm['managed_object_id'])
+    #                     rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], sevm['managed_object_id'])
+    #                     vmware_configuration[sevm['name']+'_antiaffinity_name'] = rule_name
+    #                     vmware_configuration[sevm['name']+'_antiaffinity_setting'] = rule_type
 
-        for cluster_node in cluster['nodes']:
-            if re.search('^vm-\d+',cluster_node['vm_mor']):
-                for vm_runtime in self.config['VIMgrVMRuntime']:
-                    if vm_runtime['managed_object_id'] == cluster_node['vm_mor']:
-                        vmware_configuration[vm_runtime['name']  +'_num_cpu'] = vm_runtime['num_cpu']
-                        vmware_configuration[vm_runtime['name']  +'_memory'] = vm_runtime['memory']
-                        vmware_configuration[vm_runtime['name']  +'_host_placement'] = vm_runtime['host']
-                        for cluster_run in self.config['VIMgrClusterRuntime']:
-                            for host in cluster_run['host_refs']:
-                                if re.search(vm_runtime['host'], host):
-                                    vmware_configuration[vm_runtime['name']+'_drs_setting'] = \
-                                    vcenter_cluster_config.drs_search(cluster_run['name'], vm_runtime['managed_object_id'])
-                                    rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], vm_runtime['managed_object_id'])
-                                    vmware_configuration[vm_runtime['name']+'_antiaffinity_name'] = rule_name
-                                    vmware_configuration[vm_runtime['name']+'_antiaffinity_setting'] = rule_type                                   
-        return vmware_configuration
+    #     for cluster_node in cluster['nodes']:
+    #         if re.search('^vm-\d+',cluster_node['vm_mor']):
+    #             for vm_runtime in self.config['VIMgrVMRuntime']:
+    #                 if vm_runtime['managed_object_id'] == cluster_node['vm_mor']:
+    #                     vmware_configuration[vm_runtime['name']  +'_num_cpu'] = vm_runtime['num_cpu']
+    #                     vmware_configuration[vm_runtime['name']  +'_memory'] = vm_runtime['memory']
+    #                     vmware_configuration[vm_runtime['name']  +'_host_placement'] = vm_runtime['host']
+    #                     for cluster_run in self.config['VIMgrClusterRuntime']:
+    #                         for host in cluster_run['host_refs']:
+    #                             if re.search(vm_runtime['host'], host):
+    #                                 vmware_configuration[vm_runtime['name']+'_drs_setting'] = \
+    #                                 vcenter_cluster_config.drs_search(cluster_run['name'], vm_runtime['managed_object_id'])
+    #                                 rule_name, rule_type = vcenter_cluster_config.antiaffinity_search(cluster_run['name'], vm_runtime['managed_object_id'])
+    #                                 vmware_configuration[vm_runtime['name']+'_antiaffinity_name'] = rule_name
+    #                                 vmware_configuration[vm_runtime['name']+'_antiaffinity_setting'] = rule_type                                   
+    #     return vmware_configuration
 
-    ''' ['Cloud']['oshiftk8s_configuration'] '''
-    def cloud_oshiftk8s(self):
-        self.k8s = K8s(file_path=self.file_path)
-        oshiftk8s_configuration = OrderedDict()
-        for cloud_obj in self.config['Cloud']:
-             #TODO Future clean up - self.cloud contains cloud configuration, might not need to extract from config file
-            if re.search(self.cloud['name'], cloud_obj['name']):
-                oshiftk8s_configuration = {
-                    'se_deployment_method':
-                        cloud_obj['oshiftk8s_configuration']['se_deployment_method'],
-                    'use_service_cluster_ip_as_ew_vip':
-                        cloud_obj['oshiftk8s_configuration']['use_service_cluster_ip_as_ew_vip'],
-                    'default_service_as_east_west_service':
-                        cloud_obj['oshiftk8s_configuration']['default_service_as_east_west_service'],
-                    'app_sync_frequency':
-                        cloud_obj['oshiftk8s_configuration']['app_sync_frequency'],
-                    'use_controller_image':
-                        cloud_obj['oshiftk8s_configuration']['use_controller_image'],
-                    'docker_registry_se':
-                        cloud_obj['oshiftk8s_configuration']['docker_registry_se'],
-                    'shared_virtualservice_namespace':
-                        cloud_obj['oshiftk8s_configuration']['shared_virtualservice_namespace']
-                    }
-                try:
-                    oshiftk8s_configuration['se_include_attributes'] = \
-                        cloud_obj['oshiftk8s_configuration']['se_include_attributes']
-                except:
-                    pass
-                try:
-                    oshiftk8s_configuration['se_exclude_attributes'] = \
-                        cloud_obj['oshiftk8s_configuration']['se_exclude_attributes']
-                except:
-                    pass
-                try:
-                    ew_ipam_provider_name = self._lookup_name_from_obj_ref(
-                      cloud_obj['east_west_ipam_provider_ref'])
-                    oshiftk8s_configuration['ew_configured_subnets'] = []
-                    ew_dns_provider_name = self._lookup_name_from_obj_ref(
-                      cloud_obj['east_west_dns_provider_ref'])
-                except:
-                  pass
-                ns_ipam_provider_name = self._lookup_name_from_obj_ref(
-                    cloud_obj['ipam_provider_ref'])
-                oshiftk8s_configuration['nw_configured_subnets'] = []
-                ns_dns_provider_name = self._lookup_name_from_obj_ref(
-                    cloud_obj['dns_provider_ref'])
-                # needs https://10.57.0.40/api/network-inventory for stats
-                for provider_obj in self.config['IpamDnsProviderProfile']:
-                    try:
-                      if ew_ipam_provider_name == provider_obj['name']:
-                          for network in provider_obj['internal_profile']['usable_network_refs']:
-                              network_uuid = network.split('/')[3]
-                              for network_obj in self.config['Network']:
-                                  if network_uuid == network_obj['uuid']:
-                                      oshiftk8s_configuration['ew_configured_subnets'].append(network_obj['configured_subnets'])
-                    except:
-                      pass
-                    if ns_ipam_provider_name == provider_obj['name']:
-                        if 'internal_profile' in provider_obj.keys():
-                            for network in provider_obj['internal_profile']['usable_network_refs']:
-                                network_uuid = network.split('/')[3]
-                                for network_obj in self.config['Network']:
-                                    if network_uuid == network_obj['uuid']:
-                                        oshiftk8s_configuration['nw_configured_subnets'].append(network_obj['configured_subnets'])
-                            if ew_dns_provider_name == provider_obj['name']:
-                                oshiftk8s_configuration['ew_configured_domain'] = \
-                            provider_obj['internal_profile']['dns_service_domain'][0]['domain_name']
-                            if ns_dns_provider_name == provider_obj['name']:
-                                oshiftk8s_configuration['ns_configured_domain'] = \
-                            provider_obj['internal_profile']['dns_service_domain'][0]['domain_name']
-        return oshiftk8s_configuration
+    # ''' ['Cloud']['oshiftk8s_configuration'] '''
+    # # def cloud_oshiftk8s(self):
+    #     self.k8s = K8s(file_path=self.file_path)
+    #     oshiftk8s_configuration = OrderedDict()
+    #     for cloud_obj in self.config['Cloud']:
+    #          #TODO Future clean up - self.cloud contains cloud configuration, might not need to extract from config file
+    #         if re.search(self.cloud['name'], cloud_obj['name']):
+    #             oshiftk8s_configuration = {
+    #                 'se_deployment_method':
+    #                     cloud_obj['oshiftk8s_configuration']['se_deployment_method'],
+    #                 'use_service_cluster_ip_as_ew_vip':
+    #                     cloud_obj['oshiftk8s_configuration']['use_service_cluster_ip_as_ew_vip'],
+    #                 'default_service_as_east_west_service':
+    #                     cloud_obj['oshiftk8s_configuration']['default_service_as_east_west_service'],
+    #                 'app_sync_frequency':
+    #                     cloud_obj['oshiftk8s_configuration']['app_sync_frequency'],
+    #                 'use_controller_image':
+    #                     cloud_obj['oshiftk8s_configuration']['use_controller_image'],
+    #                 'docker_registry_se':
+    #                     cloud_obj['oshiftk8s_configuration']['docker_registry_se'],
+    #                 'shared_virtualservice_namespace':
+    #                     cloud_obj['oshiftk8s_configuration']['shared_virtualservice_namespace']
+    #                 }
+    #             try:
+    #                 oshiftk8s_configuration['se_include_attributes'] = \
+    #                     cloud_obj['oshiftk8s_configuration']['se_include_attributes']
+    #             except:
+    #                 pass
+    #             try:
+    #                 oshiftk8s_configuration['se_exclude_attributes'] = \
+    #                     cloud_obj['oshiftk8s_configuration']['se_exclude_attributes']
+    #             except:
+    #                 pass
+    #             try:
+    #                 ew_ipam_provider_name = self._lookup_name_from_obj_ref(
+    #                   cloud_obj['east_west_ipam_provider_ref'])
+    #                 oshiftk8s_configuration['ew_configured_subnets'] = []
+    #                 ew_dns_provider_name = self._lookup_name_from_obj_ref(
+    #                   cloud_obj['east_west_dns_provider_ref'])
+    #             except:
+    #               pass
+    #             ns_ipam_provider_name = self._lookup_name_from_obj_ref(
+    #                 cloud_obj['ipam_provider_ref'])
+    #             oshiftk8s_configuration['nw_configured_subnets'] = []
+    #             ns_dns_provider_name = self._lookup_name_from_obj_ref(
+    #                 cloud_obj['dns_provider_ref'])
+    #             # needs https://10.57.0.40/api/network-inventory for stats
+    #             for provider_obj in self.config['IpamDnsProviderProfile']:
+    #                 try:
+    #                   if ew_ipam_provider_name == provider_obj['name']:
+    #                       for network in provider_obj['internal_profile']['usable_network_refs']:
+    #                           network_uuid = network.split('/')[3]
+    #                           for network_obj in self.config['Network']:
+    #                               if network_uuid == network_obj['uuid']:
+    #                                   oshiftk8s_configuration['ew_configured_subnets'].append(network_obj['configured_subnets'])
+    #                 except:
+    #                   pass
+    #                 if ns_ipam_provider_name == provider_obj['name']:
+    #                     if 'internal_profile' in provider_obj.keys():
+    #                         for network in provider_obj['internal_profile']['usable_network_refs']:
+    #                             network_uuid = network.split('/')[3]
+    #                             for network_obj in self.config['Network']:
+    #                                 if network_uuid == network_obj['uuid']:
+    #                                     oshiftk8s_configuration['nw_configured_subnets'].append(network_obj['configured_subnets'])
+    #                         if ew_dns_provider_name == provider_obj['name']:
+    #                             oshiftk8s_configuration['ew_configured_domain'] = \
+    #                         provider_obj['internal_profile']['dns_service_domain'][0]['domain_name']
+    #                         if ns_dns_provider_name == provider_obj['name']:
+    #                             oshiftk8s_configuration['ns_configured_domain'] = \
+    #                         provider_obj['internal_profile']['dns_service_domain'][0]['domain_name']
+    #     return oshiftk8s_configuration
     ''' se_groups configuration '''
     def se_groups(self):
         se_groups_configuration = OrderedDict()
