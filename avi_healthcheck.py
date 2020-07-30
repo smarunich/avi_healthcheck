@@ -276,9 +276,8 @@ class SSH_Base(object):
     def run_commands(self):
         response_list = []
         for cmd in self._cmd_list:
-            response_list.append(self._run_cmd(cmd, sudo=True).decode())
+            response_list.append(self._run_cmd(cmd, sudo=True).strip().decode())
         with open(self.output_dir + '/' + self.local_ip + '.ssh-avi_healthcheck.json', 'w') as fh:
-            print(response_list)
             json.dump(response_list, fh)
         return response_list
 
