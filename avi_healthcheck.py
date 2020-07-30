@@ -442,10 +442,10 @@ if __name__ == '__main__':
         avi = Avi(host=args.controller, username=args.username, password=args.password,
           output_dir=args.output_dir, tenant=args.tenant, avi_api_version=args.api_version, timeout=args.timeout, cloud_name=args.cloud_name)
     else:
-        host = raw_input("Controller IP: ")
-        username = raw_input("Username: ")
+        host = input("Controller IP: ")
+        username = input("Username: ")
         password = getpass.getpass('Password: ')
-        output_dir = raw_input("Output Directory: ")
-        avi_api_version = raw_input("Avi Vantage version: ")
-        cloud_name = raw_input("Cloud Name: ")
+        output_dir = input("Output Directory: ")
+        avi_api_version = input("Avi Vantage version: ")
+        cloud_name = input("Cloud Name: ")
         avi = Avi(host=host, username=username, password=password, output_dir=output_dir, avi_api_version=avi_api_version, cloud_name=cloud_name)
