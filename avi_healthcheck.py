@@ -254,7 +254,7 @@ class Vmware(object):
 		clusterInfo ={}
 		file_name = self.host + '-clusterconfig' + '-avi_healthcheck.json'  #based on future changes -> can be removed
 		for cluster_id in self.clusterList:
-	        data = json.dumps(cluster_id.configuration, cls=VmomiJSONEncoder)
+	        data = json.dumps(cluster_id.configuration, cls='VmomiJSONEncoder')
 	    	clusterInfo[cluster_id.name] = json.loads(data)
 	    return(file_name, clusterInfo)
 
