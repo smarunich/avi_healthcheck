@@ -83,11 +83,11 @@ class Avi(object):
         report.update({'analytics_profile_details': self.analytics_profile_details()})
         report.update({'vs_info_details': self.vs_info_details()})
         report.update({'pool_info_details': self.pool_info_details()})
-        if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
-            report.update({'cloud': self.cloud_oshiftk8s()})
-            report.update({'lingering_tenants': self.find_lingering_tenants()})
-        elif self.cloud['vtype'] == 'CLOUD_VCENTER':
-            report.update({'cloud': self.cloud_vmware()})
+        # if self.cloud['vtype'] == 'CLOUD_OSHIFT_K8S':
+        #     report.update({'cloud': self.cloud_oshiftk8s()})
+        #     report.update({'lingering_tenants': self.find_lingering_tenants()})
+        # elif self.cloud['vtype'] == 'CLOUD_VCENTER':
+        #     report.update({'cloud': self.cloud_vmware()})
 
         report_name = 'avi_healthcheck_report_' + self.cloud['name'] + '_' + \
             datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".xlsx")
