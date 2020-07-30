@@ -227,7 +227,7 @@ class Avi(object):
                     if 'avi_healthcheck.json' in file:
                         archive.add(os.path.join(root, file))
                         os.remove(os.path.join(root, file))
-        os.chmod(archive_name, 0755)
+        os.chmod(archive_name, '0755')
 
 class Vmware(object):
 	def __init__(self, vcenter_server, vcenter_user, vcenter_password, vcenter_port='443'):
