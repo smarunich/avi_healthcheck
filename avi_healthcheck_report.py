@@ -9,43 +9,43 @@ from pandas.io.json import json_normalize
 from datetime import date
 import csv
 
-class K8s():
-    def __init__(self, file_path):
-        with open(file_path + '/k8s-list_project-avi_healthcheck.json') as file_name:
-            self.k8s_projects = json.load(file_name)
-        #with open(file_path + '*.ssh-avi_healthcheck.json') as file_name:
-        #    self.ssh_commands = json.load(file_name)
-        #print self.ssh_commands
-    def projects_list(self):
-        projects_list = []
-        for project in self.k8s_projects['items']:
-            projects_list.append(project['metadata']['name'])
-        return projects_list
+# class K8s():
+#     def __init__(self, file_path):
+#         with open(file_path + '/k8s-list_project-avi_healthcheck.json') as file_name:
+#             self.k8s_projects = json.load(file_name)
+#         #with open(file_path + '*.ssh-avi_healthcheck.json') as file_name:
+#         #    self.ssh_commands = json.load(file_name)
+#         #print self.ssh_commands
+#     def projects_list(self):
+#         projects_list = []
+#         for project in self.k8s_projects['items']:
+#             projects_list.append(project['metadata']['name'])
+#         return projects_list
 
-class VMWare():
-    def __init__(self, file_path, vcenter_ip):
-        with open(file_path + '/'+vcenter_ip+'-clusterconfig-avi_healthcheck.json') as file_name:
-            self.vcenter_cluster_globals = json.load(file_name)
+# class VMWare():
+#     def __init__(self, file_path, vcenter_ip):
+#         with open(file_path + '/'+vcenter_ip+'-clusterconfig-avi_healthcheck.json') as file_name:
+#             self.vcenter_cluster_globals = json.load(file_name)
     
-    def drs_search(self, cluster_name, search_filter):
-        for drsVMConfig in self.vcenter_cluster_globals[cluster_name]['drsVmConfig']:
-            if re.search(search_filter, drsVMConfig['key']):
-                return(drsVMConfig['behavior'])
-        return('Uses defaultVmBehavior')
+#     def drs_search(self, cluster_name, search_filter):
+#         for drsVMConfig in self.vcenter_cluster_globals[cluster_name]['drsVmConfig']:
+#             if re.search(search_filter, drsVMConfig['key']):
+#                 return(drsVMConfig['behavior'])
+#         return('Uses defaultVmBehavior')
 
-    def antiaffinity_search(self, cluster_name, search_filter):
-        for rule in self.vcenter_cluster_globals[cluster_name]['rule']:
-            for vm in rule['vm']:
-                if re.search(search_filter, vm):
-                    return(rule['name'], rule['_vimtype'])
-        return('Not Configured', 'Defaults Used')
+#     def antiaffinity_search(self, cluster_name, search_filter):
+#         for rule in self.vcenter_cluster_globals[cluster_name]['rule']:
+#             for vm in rule['vm']:
+#                 if re.search(search_filter, vm):
+#                     return(rule['name'], rule['_vimtype'])
+#         return('Not Configured', 'Defaults Used')
 
-#search inside configuration by navigating nested objects(args)
-    def search(self, *argv):
-        configuration = self.vcenter_cluster_globals
-        for arg in argv:
-            configuration = configuration[arg]
-        return(configuration)
+# #search inside configuration by navigating nested objects(args)
+#     def search(self, *argv):
+#         configuration = self.vcenter_cluster_globals
+#         for arg in argv:
+#             configuration = configuration[arg]
+#         return(configuration)
 
 class Avi(object):
     def __init__(self, file_path):

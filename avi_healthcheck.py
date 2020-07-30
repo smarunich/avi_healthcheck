@@ -276,9 +276,9 @@ class SSH_Base(object):
     def run_commands(self):
         response_list = []
         for cmd in self._cmd_list:
-            print(self._run_cmd(cmd, sudo=True))
             response_list.append(self._run_cmd(cmd, sudo=True))
         with open(self.output_dir + '/' + self.local_ip + '.ssh-avi_healthcheck.json', 'w') as fh:
+            print(response_list)
             json.dump(response_list, fh)
         return response_list
 
@@ -391,32 +391,32 @@ class AviSE(SSH_Base):
         return ctrl_list
 
 
-class K8sNode(SSH_Base):
-    def __init__(self, local_ip, port=22, username=None, password=None, pem=None, controllers=None, output_dir=None):
-        super(K8sNode, self).__init__(port=port, username=username, password=password, pem=pem, output_dir=output_dir)
-        self.output_dir = output_dir
-        self.local_ip = local_ip
-        self.controllers = controllers
-        self._cmd_list = ['hostname',
-                          'docker info',
-                          'iptables -nvL',
-                          'iptables -nvL -t nat',
-                          'ip route show table all',
-                          'ifconfig',
-                          'ip link',
-                          'ip addr',
-                          'sysctl -a',
-                          'df -h',
-                          'date',
-                          'ntpq -p']
-        self._ssh = self._configure_ssh()
-        self.command_list = self.run_commands()
-        for p in self.ping_controllers():
-            self.command_list.append(p)
-        try:
-            self._ssh.close()
-        except Exception as e:
-            pass
+# class K8sNode(SSH_Base):
+#     def __init__(self, local_ip, port=22, username=None, password=None, pem=None, controllers=None, output_dir=None):
+#         super(K8sNode, self).__init__(port=port, username=username, password=password, pem=pem, output_dir=output_dir)
+#         self.output_dir = output_dir
+#         self.local_ip = local_ip
+#         self.controllers = controllers
+#         self._cmd_list = ['hostname',
+#                           'docker info',
+#                           'iptables -nvL',
+#                           'iptables -nvL -t nat',
+#                           'ip route show table all',
+#                           'ifconfig',
+#                           'ip link',
+#                           'ip addr',
+#                           'sysctl -a',
+#                           'df -h',
+#                           'date',
+#                           'ntpq -p']
+#         self._ssh = self._configure_ssh()
+#         self.command_list = self.run_commands()
+#         for p in self.ping_controllers():
+#             self.command_list.append(p)
+#         try:
+#             self._ssh.close()
+#         except Exception as e:
+#             pass
 
     def ping_controllers(self):
         ctrl_list = []
