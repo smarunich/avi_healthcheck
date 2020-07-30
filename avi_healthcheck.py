@@ -276,7 +276,7 @@ class SSH_Base(object):
     def run_commands(self):
         response_list = []
         for cmd in self._cmd_list:
-            response_list.append(self._run_cmd(cmd, sudo=True).strip().decode())
+            response_list.append(self._run_cmd(cmd, sudo=True))
         with open(self.output_dir + '/' + self.local_ip + '.ssh-avi_healthcheck.json', 'w') as fh:
             json.dump(response_list, fh)
         return response_list
@@ -315,7 +315,7 @@ class SSH_Base(object):
             if sudo and self.password is not None:
                 sin.write(self.password + '\n')
                 sin.flush()
-            cmd['response'] = sout.read()
+            cmd['response'] = sout.read().strip().decode()
         return cmd
 
 class AviController(SSH_Base):
