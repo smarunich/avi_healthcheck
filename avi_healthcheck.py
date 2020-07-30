@@ -9,14 +9,14 @@ import datetime
 import getpass
 import requests.packages.urllib3 
 requests.packages.urllib3.disable_warnings()
-#VMWARE Imports
-from pyVim.connect import SmartConnect, SmartConnectNoSSL
-from pyVmomi import vim, VmomiSupport
-from pyVmomi.VmomiSupport import VmomiJSONEncoder
-#K8 and OCP Imports
-import kubernetes.client
-from kubernetes.client.rest import ApiException
-import openshift.client
+# #VMWARE Imports
+# from pyVim.connect import SmartConnect, SmartConnectNoSSL
+# from pyVmomi import vim, VmomiSupport
+# from pyVmomi.VmomiSupport import VmomiJSONEncoder
+# #K8 and OCP Imports
+# import kubernetes.client
+# from kubernetes.client.rest import ApiException
+# import openshift.client
 #used for SSH
 import paramiko
 #Communication to controller
@@ -229,34 +229,34 @@ class Avi(object):
                         os.remove(os.path.join(root, file))
         os.chmod(archive_name, '0755')
 
-class Vmware(object):
-	def __init__(self, vcenter_server, vcenter_user, vcenter_password, vcenter_port='443'):
-		self.host = vcenter_server
-		self.user = vcenter_user
-		self.password = vcenter_password
-		self.port = vcenter_port
-        #TODO Build Support for SSL and Non-SSL verify
-		session = SmartConnectNoSSL(host=self.host,
-                            user=self.user,
-                            pwd=self.password,
-                            port=self.port)
-		self.content = session.content
+# class Vmware(object):
+# 	def __init__(self, vcenter_server, vcenter_user, vcenter_password, vcenter_port='443'):
+# 		self.host = vcenter_server
+# 		self.user = vcenter_user
+# 		self.password = vcenter_password
+# 		self.port = vcenter_port
+#         #TODO Build Support for SSL and Non-SSL verify
+# 		session = SmartConnectNoSSL(host=self.host,
+#                             user=self.user,
+#                             pwd=self.password,
+#                             port=self.port)
+# 		self.content = session.content
 
-	def get_all_objs(self, content, vimtype):
-			self.obj = {}
-			self.container = content.viewManager.CreateContainerView(content.rootFolder, vimtype, True)
-			for managed_object_ref in self.container.view:
-				self.obj.update({managed_object_ref: managed_object_ref.name})
-			return self.obj
+# 	def get_all_objs(self, content, vimtype):
+# 			self.obj = {}
+# 			self.container = content.viewManager.CreateContainerView(content.rootFolder, vimtype, True)
+# 			for managed_object_ref in self.container.view:
+# 				self.obj.update({managed_object_ref: managed_object_ref.name})
+# 			return self.obj
 
-	def gather_cluster_globals(self):
-		self.clusterList = self.get_all_objs(self.content,[vim.ClusterComputeResource])
-		clusterInfo ={}
-		file_name = self.host + '-clusterconfig' + '-avi_healthcheck.json'  #based on future changes -> can be removed
-		for cluster_id in self.clusterList:
-	        data = json.dumps(cluster_id.configuration, cls='VmomiJSONEncoder')
-	    	clusterInfo[cluster_id.name] = json.loads(data)
-	    return(file_name, clusterInfo)
+# 	def gather_cluster_globals(self):
+# 		self.clusterList = self.get_all_objs(self.content,[vim.ClusterComputeResource])
+# 		clusterInfo ={}
+# 		file_name = self.host + '-clusterconfig' + '-avi_healthcheck.json'  #based on future changes -> can be removed
+# 		for cluster_id in self.clusterList:
+#             data = json.dumps(cluster_id.configuration, cls=VmomiJSONEncoder)
+# 	    	clusterInfo[cluster_id.name] = json.loads(data)
+# 	    return(file_name, clusterInfo)
 
 class SSH_Base(object):
     def __init__(self, port=22, username=None, password=None, pem=None, output_dir=None):
@@ -424,50 +424,6 @@ class K8sNode(SSH_Base):
         with open(self.output_dir + '/' + self.local_ip + '.ping-avi_healthcheck.json', 'w') as fh:
             json.dump(ctrl_list, fh)
         return ctrl_list
-
-
-class K8s(object):
-    def __init__(self, k8s_cloud=None, private_key=None, output_dir=None):
-        self.output_dir = output_dir
-        if 'str' and 'iv' in k8s_cloud['oshiftk8s_configuration']['service_account_token']:
-            authorization_token = decrypt_string(k8s_cloud['oshiftk8s_configuration']['service_account_token'], private_key)
-        else:
-            authorization_token = k8s_cloud['oshiftk8s_configuration']['service_account_token']
-        self._kauth = kubernetes.client.Configuration()
-        if 'https://' not in k8s_cloud['oshiftk8s_configuration']['master_nodes'][0]:
-            host_url = 'https://' + k8s_cloud['oshiftk8s_configuration']['master_nodes'][0]
-        else:
-            host_url = k8s_cloud['oshiftk8s_configuration']['master_nodes'][0]
-        self._kauth.host = host_url
-        self._kauth.verify_ssl = False
-        self._kauth.api_key['authorization'] = authorization_token
-        self._kauth.api_key_prefix['authorization'] = 'Bearer'
-
-        self._oauth = kubernetes.client.Configuration()
-        self._oauth.host = host_url
-        self._oauth.verify_ssl = False
-        self._oauth.api_key['authorization'] = authorization_token
-        self._oauth.api_key_prefix['authorization'] = 'Bearer'
-
-        self.v1Api = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(self._kauth))
-        self.nodes = self._k8s_api(self.v1Api, 'list_node')
-        self.services = self._k8s_api(self.v1Api, 'list_service_for_all_namespaces')
-        self.serviceaccounts = self._k8s_api(self.v1Api, 'list_service_account_for_all_namespaces')
-
-        self.oapi = openshift.client.OapiApi(openshift.client.ApiClient(self._oauth))
-        self.projects = self._k8s_api(self.oapi, 'list_project')
-
-    def _k8s_api(self, api, cmd):
-        try:
-            print(api, cmd)
-            response = getattr(api, cmd)()
-            flat = kubernetes.client.ApiClient().sanitize_for_serialization(response)
-            with open(self.output_dir + '/' + 'k8s-' + cmd + '-avi_healthcheck.json', 'w') as fh:
-                json.dump(flat, fh)
-            return response
-        except ApiException as e:
-            print('K8s exception with %s' % cmd)
-            print(e)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
