@@ -371,7 +371,16 @@ class AviSE(SSH_Base):
                           'df -h',
                           'ls -ail /opt/avi/log',
                           'date',
-                          'ntpq -p']
+                          'ntpq -p',
+                          'cat /etc/sysconfig/network-scripts/ifcfg-*',
+                          'cat /etc/network/interfaces',
+                          'cat /proc/meminfo',
+                          'cat /proc/cpuinfo',
+                          'lscpu',
+                          'ulimit -a',
+                          'dmesg -T',
+                          'cat /etc/sysconfig/selinux',
+                          'systemctl -t service list-units']
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
         for p in self.ping_controllers():
@@ -407,7 +416,16 @@ class K8sNode(SSH_Base):
                           'sysctl -a',
                           'df -h',
                           'date',
-                          'ntpq -p']
+                          'ntpq -p',
+                          'cat /etc/sysconfig/network-scripts/ifcfg-*',
+                          'cat /etc/network/interfaces',
+                          'cat /proc/meminfo',
+                          'cat /proc/cpuinfo',
+                          'lscpu',
+                          'ulimit -a',
+                          'dmesg -T',
+                          'cat /etc/sysconfig/selinux',
+                          'systemctl -t service list-units']
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
         for p in self.ping_controllers():
