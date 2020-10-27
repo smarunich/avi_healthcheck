@@ -380,6 +380,7 @@ class AviSE(SSH_Base):
                           'ulimit -a',
                           'dmesg -T',
                           'cat /etc/sysconfig/selinux',
+                          'cat /etc/selinux/config',
                           'systemctl -t service list-units']
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
@@ -425,6 +426,7 @@ class K8sNode(SSH_Base):
                           'ulimit -a',
                           'dmesg -T',
                           'cat /etc/sysconfig/selinux',
+                          'cat /etc/selinux/config',
                           'systemctl -t service list-units']
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
