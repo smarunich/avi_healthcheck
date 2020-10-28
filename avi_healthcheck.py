@@ -386,7 +386,10 @@ class AviSE(SSH_Base):
                           'cat /etc/sysconfig/selinux',
                           'cat /etc/selinux/config',
                           'cat /var/log/upstart/journal',
-                          'systemctl -t service list-units --no-pager']
+                          'systemctl -t service list-units --no-pager',
+                          'cat /var/log/upstart/journal',
+                          'journalctl  --no-page'
+                          ]
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
         for p in self.ping_controllers():
@@ -433,8 +436,10 @@ class K8sNode(SSH_Base):
                           'dmesg -T',
                           'cat /etc/sysconfig/selinux',
                           'cat /etc/selinux/config',
+                          'systemctl -t service list-units --no-pager',
                           'cat /var/log/upstart/journal',
-                          'systemctl -t service list-units --no-pager']
+                          'journalctl  --no-page'
+                          ]
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
         for p in self.ping_controllers():
