@@ -91,11 +91,12 @@ class Avi(object):
                     #TODO Does this need to be done for every cloud type?
                     self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
             elif c['vtype'] == 'CLOUD_LINUXSERVER':
-                for se_ip in self._se_local_addresses(cloud_uuid=c['uuid']):
-                    self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
+                internals = self._get('cloud/' + c['uuid'] + '/internals')
                 for node in internals['agents'][0]['linuxserver']['hosts']:
                     user = self._find_cc_user(cloud=c)
                     self.node_connections.append(K8sNode(node['host'], controllers=self.cl_list, output_dir=self.output_dir, **user))
+                for se_ip in self._se_local_addresses(cloud_uuid=c['uuid']):
+                    self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
             elif c['vtype'] == 'CLOUD_VCENTER' and c['vcenter_configuration']['privilege'] == 'WRITE_ACCESS':
                 self.vcenter_session = Vmware(c['vcenter_configuration']['vcenter_url'], c['vcenter_configuration']['username'], decrypt_string(c['vcenter_configuration']['password'], self.private_key))
                 self.vmware_runtime = ['cluster','vimgrclusterruntime','vimgrsevmruntime','vimgrvcenterruntime']
