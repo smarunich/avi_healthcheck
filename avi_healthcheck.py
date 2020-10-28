@@ -175,7 +175,7 @@ class Avi(object):
     def _find_cc_user(self, cloud=None):
         user = {}
         if cloud is not None:
-            cloudconnectoruser_ref = ''.join(cloud['oshiftk8s_configuration']['ssh_user_ref'].split('/')[-2:])
+            cloudconnectoruser_ref = ''.join(cloud['linuxserver_configuration']['ssh_user_ref'].split('/')[-2:])
             uuid = self._get(cloudconnectoruser_ref)['results'][0]['uuid']
             for ccu in self.export['CloudConnectorUser']:
                 if ccu['uuid'] == uuid:
