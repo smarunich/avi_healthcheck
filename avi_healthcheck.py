@@ -90,6 +90,9 @@ class Avi(object):
                             self.node_connections.append(K8sNode(node['host_ip'], controllers=self.cl_list, output_dir=self.output_dir, **user))
                     #TODO Does this need to be done for every cloud type?
                     self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
+            elif c['vtype'] == 'CLOUD_LINUXSERVER':
+                for se_ip in self._se_local_addresses(cloud_uuid=c['uuid']):
+                    self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
             elif c['vtype'] == 'CLOUD_VCENTER' and c['vcenter_configuration']['privilege'] == 'WRITE_ACCESS':
                 self.vcenter_session = Vmware(c['vcenter_configuration']['vcenter_url'], c['vcenter_configuration']['username'], decrypt_string(c['vcenter_configuration']['password'], self.private_key))
                 self.vmware_runtime = ['cluster','vimgrclusterruntime','vimgrsevmruntime','vimgrvcenterruntime']
@@ -381,6 +384,7 @@ class AviSE(SSH_Base):
                           'dmesg -T',
                           'cat /etc/sysconfig/selinux',
                           'cat /etc/selinux/config',
+                          'cat /var/log/upstart/journal',
                           'systemctl -t service list-units']
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
@@ -427,6 +431,7 @@ class K8sNode(SSH_Base):
                           'dmesg -T',
                           'cat /etc/sysconfig/selinux',
                           'cat /etc/selinux/config',
+                          'cat /var/log/upstart/journal',
                           'systemctl -t service list-units']
         self._ssh = self._configure_ssh()
         self.command_list = self.run_commands()
