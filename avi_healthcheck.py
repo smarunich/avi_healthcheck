@@ -177,7 +177,7 @@ class Avi(object):
         r = self._get('techsupportv2/debuglogs')
         r = self._get('techsupportstatusv2')
         print r.keys()
-        while r['output'] == "None":
+        while r.status != 200":
             r = self._get('techsupportstatusv2')
         r = self._get('fileservice?uri=controller://tech_support/'+r['output'].split('/')[-1])
 
