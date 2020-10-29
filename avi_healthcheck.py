@@ -54,6 +54,7 @@ class Avi(object):
         self.timeout = timeout
 
         self.api = ApiSession.get_session(controller_ip = self.host, username=self.username, password=self.password, tenant=self.tenant, api_version=self.avi_api_version, timeout=self.timeout)
+        self.debuglogs()
         self.backup()
 
         #TODO should be cleaner
@@ -171,6 +172,13 @@ class Avi(object):
     def backup(self):
         r = self._get('configuration/export', params={'full_system': True, 'passphrase': self.password})
         self.export = r
+
+    def debuglogs(self):
+        r = self._get('techsupportv2/debuglogs')
+        r = self._get('techsupportstatusv2')
+        while r['output'] == "None":
+            r = self._get('techsupportstatusv2')
+        r = self._get('fileservice?uri=controller://tech_support/'+r['output'].split('/')[-1])
 
     def _find_cc_user(self, cloud=None):
         user = {}
