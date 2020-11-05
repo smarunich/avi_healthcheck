@@ -26,6 +26,9 @@ from avi.util.ssl_utils import encrypt_string, decrypt_string
 import os
 import sys
 import warnings
+import time
+from shutil import copy
+
 warnings.filterwarnings("ignore", category=UserWarning)
 sys.path.append('/opt/avi/python/bin/portal')
 os.environ["DJANGO_SETTINGS_MODULE"] = "portal.settings_full"
@@ -54,8 +57,8 @@ class Avi(object):
         self.timeout = timeout
 
         self.api = ApiSession.get_session(controller_ip = self.host, username=self.username, password=self.password, tenant=self.tenant, api_version=self.avi_api_version, timeout=self.timeout)
-        self.debuglogs()
         self.backup()
+        self.debuglogs()
 
         #TODO should be cleaner
         self.cloud = self._get('cloud', params={'include_name': True, 'page_size': '200', 'name': self.cloud_name})
@@ -67,11 +70,15 @@ class Avi(object):
         self.events()
         self.vs_inventory()
         self.network_inventory()
-        self.cc_list = self.export['Cloud']
-        self.check_key_passphrase(self.export, self.password)
+        
 
         #TODO Needs to be cleaner
         self.se_inventory = self._get('serviceengine-inventory', params={'include_name': True, 'page_size': '200', "refers_to": 'cloud:'+self.cloud['results'][0]['uuid']})
+        self.sedebuglogs()
+        
+        self.cc_list = self.export['Cloud']
+        self.check_key_passphrase(self.export, self.password)
+        
 
         #TODO If DNS doesn't exist - this will crash script
         # self.dns_metrics()
@@ -93,9 +100,10 @@ class Avi(object):
                     self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
             elif c['vtype'] == 'CLOUD_LINUXSERVER':
                 internals = self._get('cloud/' + c['uuid'] + '/internals')
-                for node in internals['agents'][0]['linuxserver']['hosts']:
-                    user = self._find_cc_user(cloud=c)
-                    self.node_connections.append(K8sNode(node['host'], controllers=self.cl_list, output_dir=self.output_dir, **user))
+                if internals['agents'][0]['linuxserver'].get('hosts'):
+                    for node in internals['agents'][0]['linuxserver']['hosts']:
+                        user = self._find_cc_user(cloud=c)
+                        self.node_connections.append(K8sNode(node['host'], controllers=self.cl_list, output_dir=self.output_dir, **user))
                 for se_ip in self._se_local_addresses(cloud_uuid=c['uuid']):
                     self.se_connections.append(AviSE(se_ip, password=self.password, controllers=self.cl_list, output_dir=self.output_dir))
             elif c['vtype'] == 'CLOUD_VCENTER' and c['vcenter_configuration']['privilege'] == 'WRITE_ACCESS':
@@ -174,12 +182,39 @@ class Avi(object):
         self.export = r
 
     def debuglogs(self):
+        debuglogs = ""
         r = self._get('techsupportv2/debuglogs')
-        r = self._get('techsupportstatusv2')
-        print r.keys()
-        while r.status != 200:
-            r = self._get('techsupportstatusv2')
-        r = self._get('fileservice?uri=controller://tech_support/'+r['output'].split('/')[-1])
+        if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_STARTED":
+            #Add a timer for log collection timeout
+            while True:
+                r = self._get("techsupportstatusv2")
+                if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_SUCCESS":
+                    debuglogs = r['output'].split('/')[-1]
+                    break
+                else:
+                    time.sleep(10)
+        if debuglogs:
+            #Copy file locally, convert to http transfer later
+            copy(r['output'],os.getcwd()+'/'+self.output_dir+'/'+debuglogs)  
+        return debuglogs  
+    def sedebuglogs(self):
+        for se in self.se_inventory['results']:
+            print "Collecting logs for %s" %(se['config']['name'])
+            r = self._get('techsupportv2/serviceengine/'+se['uuid'])
+            if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_STARTED":
+            #Add a timer for log collection timeout
+                while True:
+                    r = self._get("techsupportstatusv2")
+                    if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_SUCCESS":
+                        sedebuglogs = r['output'].split('/')[-1]
+                        break
+                    else:
+                        time.sleep(10)
+            if sedebuglogs:
+                #Copy file locally, convert to http transfer later
+                copy(r['output'],os.getcwd()+'/'+self.output_dir+'/'+sedebuglogs)
+
+        #return 0
 
     def _find_cc_user(self, cloud=None):
         user = {}
