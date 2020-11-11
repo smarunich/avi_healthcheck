@@ -58,6 +58,8 @@ class Avi(object):
 
         self.api = ApiSession.get_session(controller_ip = self.host, username=self.username, password=self.password, tenant=self.tenant, api_version=self.avi_api_version, timeout=self.timeout)
         self.backup()
+        #define a timeout for SE and Controller debug log collection, in minutes
+        self.logtimeout = 10 
         self.debuglogs()
 
         #TODO should be cleaner
@@ -185,36 +187,46 @@ class Avi(object):
         debuglogs = ""
         r = self._get('techsupportv2/debuglogs')
         if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_STARTED":
-            #Add a timer for log collection timeout
+            timer = 0
             while True:
                 r = self._get("techsupportstatusv2")
                 if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_SUCCESS":
                     debuglogs = r['output'].split('/')[-1]
                     break
                 else:
-                    time.sleep(10)
+                    if timer >= self.logtimeout*60:
+                        break
+                    else:
+                        timer += 10
+                        time.sleep(10)
         if debuglogs:
             #Copy file locally, convert to http transfer later
-            copy(r['output'],os.getcwd()+'/'+self.output_dir+'/'+debuglogs)  
+            copy(r['output'],os.getcwd()+'/'+self.output_dir+'/'+debuglogs) 
+        else:
+            print "Couldn't collect debuglogs" 
         return debuglogs  
     def sedebuglogs(self):
         for se in self.se_inventory['results']:
             print "Collecting logs for %s" %(se['config']['name'])
             r = self._get('techsupportv2/serviceengine/'+se['uuid'])
             if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_STARTED":
-            #Add a timer for log collection timeout
+                timer = 0
                 while True:
                     r = self._get("techsupportstatusv2")
                     if r['status_code'] == "SYSERR_TECH_SUPPORT_COLLECTION_SUCCESS":
                         sedebuglogs = r['output'].split('/')[-1]
                         break
                     else:
-                        time.sleep(10)
+                        if timer >= self.logtimeout*60:
+                            break
+                        else:
+                            timer += 10
+                            time.sleep(10)    
             if sedebuglogs:
                 #Copy file locally, convert to http transfer later
                 copy(r['output'],os.getcwd()+'/'+self.output_dir+'/'+sedebuglogs)
-
-        #return 0
+            else:
+                print "Couldn't collect logs for %s " %(se['config']['name'])
 
     def _find_cc_user(self, cloud=None):
         user = {}
